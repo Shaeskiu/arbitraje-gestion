@@ -120,6 +120,24 @@ app.post('/opportunities', async (req, res) => {
     const costs = opportunity.costs || [];
     delete opportunity.costs;
 
+    // Normalizar status a los valores permitidos
+    if (opportunity.status) {
+      const statusValue = String(opportunity.status).toLowerCase().trim();
+      opportunity.status = statusValue === 'detectado' ? 'detectada'
+        : statusValue === 'descartado' ? 'descartada'
+        : statusValue === 'convertido' ? 'convertida'
+        : statusValue === 'comprado' || statusValue === 'comprada' ? 'convertida'
+        : statusValue === 'vendido' || statusValue === 'vendida' ? 'convertida'
+        : statusValue === 'analizado' || statusValue === 'analizada' ? 'detectada'
+        : statusValue === 'aprobado' || statusValue === 'aprobada' ? 'detectada'
+        : (statusValue === 'detectada' || statusValue === 'descartada' || statusValue === 'convertida')
+            ? statusValue
+            : 'detectada'; // Valor por defecto
+    } else {
+      // Si no viene status, usar 'detectada' por defecto
+      opportunity.status = 'detectada';
+    }
+
     const { data: newOpportunity, error: oppError } = await supabase
       .from('opportunities')
       .insert([opportunity])
@@ -211,6 +229,21 @@ app.put('/opportunities/:id', async (req, res) => {
     const updates = req.body;
     const costs = updates.costs;
     delete updates.costs;
+
+    // Normalizar status a los valores permitidos si viene en los updates
+    if (updates.status) {
+      const statusValue = String(updates.status).toLowerCase().trim();
+      updates.status = statusValue === 'detectado' ? 'detectada'
+        : statusValue === 'descartado' ? 'descartada'
+        : statusValue === 'convertido' ? 'convertida'
+        : statusValue === 'comprado' || statusValue === 'comprada' ? 'convertida'
+        : statusValue === 'vendido' || statusValue === 'vendida' ? 'convertida'
+        : statusValue === 'analizado' || statusValue === 'analizada' ? 'detectada'
+        : statusValue === 'aprobado' || statusValue === 'aprobada' ? 'detectada'
+        : (statusValue === 'detectada' || statusValue === 'descartada' || statusValue === 'convertida')
+            ? statusValue
+            : 'detectada'; // Valor por defecto
+    }
 
     const { error: oppError } = await supabase
       .from('opportunities')
@@ -614,111 +647,236 @@ app.delete('/channels/:id', async (req, res) => {
 });
 
 // ============================================
-// STOCK ENDPOINTS
+// COMPRAS ENDPOINTS
 // ============================================
 
-app.post('/stock/from-opportunity', async (req, res) => {
+app.post('/compras', async (req, res) => {
   try {
-    const { opportunity_id, real_purchase_price, units } = req.body;
+    const { oportunidad_id, canal_origen_id, product_name, precio_unitario, unidades, costes_compra, fecha_compra } = req.body;
 
-    if (!opportunity_id || typeof opportunity_id !== 'string' || !isValidUUID(opportunity_id)) {
-      return res.status(400).json({ error: 'Valid opportunity_id is required' });
+    // Validaciones
+    if (!canal_origen_id || typeof canal_origen_id !== 'string' || !isValidUUID(canal_origen_id)) {
+      return res.status(400).json({ error: 'Valid canal_origen_id is required' });
     }
 
-    if (real_purchase_price === undefined || real_purchase_price === null || parseFloat(real_purchase_price) < 0) {
-      return res.status(400).json({ error: 'Valid real_purchase_price is required (>= 0)' });
+    if (!product_name || typeof product_name !== 'string' || !product_name.trim()) {
+      return res.status(400).json({ error: 'Valid product_name is required' });
     }
 
-    if (!units || parseInt(units) <= 0) {
-      return res.status(400).json({ error: 'Valid units is required (> 0)' });
+    if (precio_unitario === undefined || precio_unitario === null || parseFloat(precio_unitario) < 0) {
+      return res.status(400).json({ error: 'Valid precio_unitario is required (>= 0)' });
     }
 
-    // Get the opportunity to convert
-    const { data: opportunity, error: oppError } = await supabase
-      .from('opportunities')
-      .select('*')
-      .eq('id', opportunity_id)
-      .single();
-
-    if (oppError || !opportunity) {
-      return res.status(404).json({ error: 'Opportunity not found' });
+    if (!unidades || parseInt(unidades) <= 0) {
+      return res.status(400).json({ error: 'Valid unidades is required (> 0)' });
     }
 
-    if (opportunity.status === 'converted') {
-      return res.status(400).json({ error: 'Opportunity is already converted' });
-    }
+    // Validar oportunidad si se proporciona
+    let productName = product_name.trim();
+    if (oportunidad_id) {
+      if (typeof oportunidad_id !== 'string' || !isValidUUID(oportunidad_id)) {
+        return res.status(400).json({ error: 'Invalid oportunidad_id format' });
+      }
 
-    // Get the channel name and ID
-    let purchaseChannel = opportunity.origin_channel || '';
-    let purchaseChannelId = opportunity.origin_channel_id || null;
-
-    if (opportunity.origin_channel_id) {
-      const { data: channel } = await supabase
-        .from('channels')
-        .select('name')
-        .eq('id', opportunity.origin_channel_id)
+      const { data: opportunity, error: oppError } = await supabase
+        .from('opportunities')
+        .select('id, status, product_name')
+        .eq('id', oportunidad_id)
         .single();
-      
-      if (channel) {
-        purchaseChannel = channel.name;
+
+      if (oppError || !opportunity) {
+        return res.status(404).json({ error: 'Oportunidad not found' });
+      }
+
+      if (opportunity.status === 'convertida') {
+        return res.status(400).json({ error: 'Oportunidad ya está convertida' });
+      }
+
+      // Usar el product_name de la oportunidad si no se proporciona explícitamente
+      if (opportunity.product_name) {
+        productName = opportunity.product_name;
       }
     }
 
-    // Create stock record
-    const { data: stock, error: stockError } = await supabase
-      .from('stock')
-      .insert({
-        opportunity_id: opportunity_id,
-        product_name: opportunity.product_name,
-        purchase_channel: purchaseChannel,
-        purchase_channel_id: purchaseChannelId,
-        real_purchase_price: parseFloat(real_purchase_price),
-        units_purchased: parseInt(units),
-        purchase_date: new Date().toISOString().split('T')[0],
-        stock_status: 'in_stock',
-        notes: opportunity.notes || null
-      })
-      .select()
+    // Validar canal origen
+    const { data: channel, error: channelError } = await supabase
+      .from('channels')
+      .select('id')
+      .eq('id', canal_origen_id)
       .single();
 
-    if (stockError) {
-      console.error('Error creating stock:', stockError);
-      return res.status(500).json({ error: 'Error creating stock', details: stockError.message });
+    if (channelError || !channel) {
+      return res.status(404).json({ error: 'Canal origen not found' });
     }
 
-    // Update opportunity status to 'converted'
-    const { error: updateError } = await supabase
-      .from('opportunities')
-      .update({ status: 'converted' })
-      .eq('id', opportunity_id);
+    // Calcular total de compra
+    const precioUnitarioNum = parseFloat(precio_unitario);
+    const unidadesNum = parseInt(unidades);
+    const costesCompraArray = Array.isArray(costes_compra) ? costes_compra : [];
+    const totalCostes = costesCompraArray.reduce((sum, coste) => {
+      return sum + (parseFloat(coste.value) || 0);
+    }, 0);
+    const totalCompra = (precioUnitarioNum * unidadesNum) + totalCostes;
 
-    if (updateError) {
-      console.error('Error updating opportunity status:', updateError);
-      // Try to delete the stock record we just created
-      await supabase.from('stock').delete().eq('id', stock.id);
-      return res.status(500).json({ error: 'Error updating opportunity status', details: updateError.message });
+    // Crear compra
+    const compraData = {
+      oportunidad_id: oportunidad_id || null,
+      canal_origen_id: canal_origen_id,
+      product_name: productName,
+      precio_unitario: precioUnitarioNum,
+      unidades: unidadesNum,
+      costes_compra: costesCompraArray,
+      total_compra: totalCompra,
+      fecha_compra: fecha_compra || new Date().toISOString().split('T')[0]
+    };
+
+    const { data: compra, error: compraError } = await supabase
+      .from('compras')
+      .insert(compraData)
+      .select('*')
+      .single();
+
+    if (compraError) {
+      console.error('Error creating compra:', compraError);
+      return res.status(500).json({ error: 'Error creating compra', details: compraError.message });
     }
 
-    res.status(201).json(stock);
+    // El stock se crea automáticamente mediante trigger, obtenerlo
+    const { data: stockCreated, error: stockError } = await supabase
+      .from('stock')
+      .select('*')
+      .eq('compra_id', compra.id)
+      .single();
+
+    // Actualizar estado de oportunidad si existe
+    if (oportunidad_id) {
+      const { error: updateError } = await supabase
+        .from('opportunities')
+        .update({ status: 'convertida' })
+        .eq('id', oportunidad_id);
+
+      if (updateError) {
+        console.error('Error updating opportunity status:', updateError);
+        // No revertir la compra, solo loggear el error
+      }
+    }
+
+    res.status(201).json({
+      compra,
+      stock: stockCreated
+    });
   } catch (error) {
     console.error('Unexpected error:', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
-app.get('/stock', async (req, res) => {
+app.get('/compras', async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('stock')
+    const { data: compras, error } = await supabase
+      .from('compras')
       .select('*')
-      .order('purchase_date', { ascending: false });
+      .order('fecha_compra', { ascending: false });
 
     if (error) {
       console.error('Supabase error:', error);
       return res.status(500).json({ error: 'Database error', details: error.message });
     }
 
-    res.json(data || []);
+    // Enriquecer con datos de canales y oportunidades
+    if (compras && compras.length > 0) {
+      const channelIds = [...new Set(compras.map(c => c.canal_origen_id).filter(Boolean))];
+      const oppIds = [...new Set(compras.map(c => c.oportunidad_id).filter(Boolean))];
+
+      const [channelsData, oppsData] = await Promise.all([
+        channelIds.length > 0 ? supabase.from('channels').select('id, name').in('id', channelIds) : { data: [] },
+        oppIds.length > 0 ? supabase.from('opportunities').select('id, product_name').in('id', oppIds) : { data: [] }
+      ]);
+
+      const channelsMap = {};
+      if (channelsData.data) {
+        channelsData.data.forEach(ch => { channelsMap[ch.id] = ch.name; });
+      }
+
+      const oppsMap = {};
+      if (oppsData.data) {
+        oppsData.data.forEach(opp => { oppsMap[opp.id] = opp.product_name; });
+      }
+
+      const enriched = compras.map(compra => ({
+        ...compra,
+        canal_origen_name: channelsMap[compra.canal_origen_id] || null,
+        oportunidad_product_name: oppsMap[compra.oportunidad_id] || null
+      }));
+
+      return res.json(enriched);
+    }
+
+    res.json([]);
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// ============================================
+// STOCK ENDPOINTS (Nuevo modelo)
+// ============================================
+
+app.get('/stock', async (req, res) => {
+  try {
+    const { data: stockItems, error } = await supabase
+      .from('stock')
+      .select('*')
+      .gt('unidades_disponibles', 0)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return res.status(500).json({ error: 'Database error', details: error.message });
+    }
+
+    // Enriquecer con datos de compras
+    if (stockItems && stockItems.length > 0) {
+      const compraIds = [...new Set(stockItems.map(s => s.compra_id).filter(Boolean))];
+      
+      const { data: compras } = await supabase
+        .from('compras')
+        .select('id, oportunidad_id, canal_origen_id, product_name, fecha_compra')
+        .in('id', compraIds);
+
+      const channelIds = [...new Set(compras?.map(c => c.canal_origen_id).filter(Boolean) || [])];
+
+      const channelsData = channelIds.length > 0 
+        ? await supabase.from('channels').select('id, name').in('id', channelIds)
+        : { data: [] };
+
+      const comprasMap = {};
+      if (compras) {
+        compras.forEach(c => { comprasMap[c.id] = c; });
+      }
+
+      const channelsMap = {};
+      if (channelsData.data) {
+        channelsData.data.forEach(ch => { channelsMap[ch.id] = ch.name; });
+      }
+
+      const enriched = stockItems.map(stock => {
+        const compra = comprasMap[stock.compra_id];
+        return {
+          ...stock,
+          product_name: compra?.product_name || stock.product_name || null,
+          compra: compra ? {
+            ...compra,
+            canal_origen: channelsMap[compra.canal_origen_id] ? { id: compra.canal_origen_id, name: channelsMap[compra.canal_origen_id] } : null
+          } : null
+        };
+      });
+
+      return res.json(enriched);
+    }
+
+    res.json([]);
   } catch (error) {
     console.error('Unexpected error:', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
@@ -733,7 +891,7 @@ app.get('/stock/:id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid stock ID' });
     }
 
-    const { data, error } = await supabase
+    const { data: stockItem, error } = await supabase
       .from('stock')
       .select('*')
       .eq('id', id)
@@ -747,82 +905,232 @@ app.get('/stock/:id', async (req, res) => {
       return res.status(500).json({ error: 'Database error', details: error.message });
     }
 
-    if (!data) {
+    if (!stockItem) {
       return res.status(404).json({ error: 'Stock item not found' });
     }
 
-    res.json(data);
+    // Enriquecer con datos de compra
+    if (stockItem.compra_id) {
+      const { data: compra } = await supabase
+        .from('compras')
+        .select('*')
+        .eq('id', stockItem.compra_id)
+        .single();
+
+      if (compra) {
+        const channelData = compra.canal_origen_id 
+          ? await supabase.from('channels').select('id, name').eq('id', compra.canal_origen_id).single()
+          : { data: null };
+
+        stockItem.product_name = compra.product_name || stockItem.product_name || null;
+        stockItem.compra = {
+          ...compra,
+          canal_origen: channelData.data ? { id: channelData.data.id, name: channelData.data.name } : null
+        };
+      }
+    }
+
+    res.json(stockItem);
   } catch (error) {
     console.error('Unexpected error:', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
-app.put('/stock/:id', async (req, res) => {
+// ============================================
+// VENTAS ENDPOINTS
+// ============================================
+
+app.post('/ventas', async (req, res) => {
   try {
-    const { id } = req.params;
-    
-    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
-      return res.status(400).json({ error: 'Invalid stock ID' });
+    const { stock_id, canal_destino_id, precio_unitario, unidades, costes_venta, fecha_venta } = req.body;
+
+    // Validaciones
+    if (!stock_id || typeof stock_id !== 'string' || !isValidUUID(stock_id)) {
+      return res.status(400).json({ error: 'Valid stock_id is required' });
     }
 
-    const { product_name, purchase_channel, purchase_channel_id, real_purchase_price, units_purchased, purchase_date, stock_status, notes } = req.body;
+    if (!canal_destino_id || typeof canal_destino_id !== 'string' || !isValidUUID(canal_destino_id)) {
+      return res.status(400).json({ error: 'Valid canal_destino_id is required' });
+    }
 
-    const updateData = {};
-    if (product_name !== undefined) updateData.product_name = String(product_name).trim();
-    if (purchase_channel !== undefined) updateData.purchase_channel = String(purchase_channel).trim();
-    if (purchase_channel_id !== undefined) updateData.purchase_channel_id = purchase_channel_id || null;
-    if (real_purchase_price !== undefined) updateData.real_purchase_price = parseFloat(real_purchase_price);
-    if (units_purchased !== undefined) updateData.units_purchased = parseInt(units_purchased);
-    if (purchase_date !== undefined) updateData.purchase_date = String(purchase_date);
-    if (stock_status !== undefined) updateData.stock_status = String(stock_status);
-    if (notes !== undefined) updateData.notes = notes ? String(notes).trim() : null;
+    if (precio_unitario === undefined || precio_unitario === null || parseFloat(precio_unitario) < 0) {
+      return res.status(400).json({ error: 'Valid precio_unitario is required (>= 0)' });
+    }
 
-    const { data, error } = await supabase
+    if (!unidades || parseInt(unidades) <= 0) {
+      return res.status(400).json({ error: 'Valid unidades is required (> 0)' });
+    }
+
+    // Verificar stock disponible y obtener product_name
+    const { data: stockItem, error: stockError } = await supabase
       .from('stock')
-      .update(updateData)
-      .eq('id', id)
-      .select()
+      .select('unidades_disponibles, coste_unitario_real, compra_id')
+      .eq('id', stock_id)
       .single();
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return res.status(404).json({ error: 'Stock item not found' });
-      }
-      console.error('Supabase error:', error);
-      return res.status(500).json({ error: 'Database error', details: error.message });
-    }
-
-    if (!data) {
+    if (stockError || !stockItem) {
       return res.status(404).json({ error: 'Stock item not found' });
     }
 
-    res.json(data);
+    const unidadesNum = parseInt(unidades);
+    if (stockItem.unidades_disponibles < unidadesNum) {
+      return res.status(400).json({ 
+        error: 'No hay suficientes unidades disponibles', 
+        disponibles: stockItem.unidades_disponibles,
+        solicitadas: unidadesNum
+      });
+    }
+
+    // Obtener product_name desde compras -> opportunities
+    let productName = null;
+    if (stockItem.compra_id) {
+      const { data: compra, error: compraError } = await supabase
+        .from('compras')
+        .select('product_name, oportunidad_id')
+        .eq('id', stockItem.compra_id)
+        .single();
+
+      if (!compraError && compra) {
+        productName = compra.product_name;
+        
+        // Si no tiene product_name en compra, intentar obtenerlo desde opportunity
+        if (!productName && compra.oportunidad_id) {
+          const { data: opportunity, error: oppError } = await supabase
+            .from('opportunities')
+            .select('product_name')
+            .eq('id', compra.oportunidad_id)
+            .single();
+
+          if (!oppError && opportunity && opportunity.product_name) {
+            productName = opportunity.product_name;
+          }
+        }
+      }
+    }
+
+    // Si aún no tenemos product_name, usar un valor por defecto
+    if (!productName || !productName.trim()) {
+      productName = 'Producto vendido';
+    }
+
+    // Validar canal destino
+    const { data: channel, error: channelError } = await supabase
+      .from('channels')
+      .select('id')
+      .eq('id', canal_destino_id)
+      .single();
+
+    if (channelError || !channel) {
+      return res.status(404).json({ error: 'Canal destino not found' });
+    }
+
+    // Calcular total de venta
+    const precioUnitarioNum = parseFloat(precio_unitario);
+    const costesVentaArray = Array.isArray(costes_venta) ? costes_venta : [];
+    const totalCostes = costesVentaArray.reduce((sum, coste) => {
+      return sum + (parseFloat(coste.value) || 0);
+    }, 0);
+    const totalVenta = (precioUnitarioNum * unidadesNum) - totalCostes;
+
+    // Crear venta (el trigger descontará el stock automáticamente)
+    const ventaData = {
+      stock_id: stock_id,
+      canal_destino_id: canal_destino_id,
+      product_name: productName.trim(),
+      precio_unitario: precioUnitarioNum,
+      unidades: unidadesNum,
+      costes_venta: costesVentaArray,
+      total_venta: totalVenta,
+      fecha_venta: fecha_venta || new Date().toISOString().split('T')[0]
+    };
+
+    const { data: venta, error: ventaError } = await supabase
+      .from('ventas')
+      .insert(ventaData)
+      .select('*')
+      .single();
+
+    if (ventaError) {
+      console.error('Error creating venta:', ventaError);
+      return res.status(500).json({ error: 'Error creating venta', details: ventaError.message });
+    }
+
+    res.status(201).json(venta);
   } catch (error) {
     console.error('Unexpected error:', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
-app.delete('/stock/:id', async (req, res) => {
+app.get('/ventas', async (req, res) => {
   try {
-    const { id } = req.params;
-    
-    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
-      return res.status(400).json({ error: 'Invalid stock ID' });
-    }
-
-    const { error } = await supabase
-      .from('stock')
-      .delete()
-      .eq('id', id);
+    const { data: ventas, error } = await supabase
+      .from('ventas')
+      .select('*')
+      .order('fecha_venta', { ascending: false });
 
     if (error) {
       console.error('Supabase error:', error);
       return res.status(500).json({ error: 'Database error', details: error.message });
     }
 
-    res.status(204).send();
+    // Enriquecer con datos relacionados
+    if (ventas && ventas.length > 0) {
+      const stockIds = [...new Set(ventas.map(v => v.stock_id).filter(Boolean))];
+      const channelIds = [...new Set(ventas.map(v => v.canal_destino_id).filter(Boolean))];
+
+      const { data: stockItems } = await supabase
+        .from('stock')
+        .select('id, compra_id')
+        .in('id', stockIds);
+
+      const compraIds = [...new Set(stockItems?.map(s => s.compra_id).filter(Boolean) || [])];
+      
+      const [channelsData, comprasData] = await Promise.all([
+        channelIds.length > 0 ? supabase.from('channels').select('id, name').in('id', channelIds) : { data: [] },
+        compraIds.length > 0 ? supabase.from('compras').select('id, oportunidad_id').in('id', compraIds) : { data: [] }
+      ]);
+
+      const oppIds = [...new Set(comprasData.data?.map(c => c.oportunidad_id).filter(Boolean) || [])];
+      const { data: oppsData } = oppIds.length > 0 
+        ? await supabase.from('opportunities').select('id, product_name').in('id', oppIds)
+        : { data: [] };
+
+      const stockMap = {};
+      if (stockItems) {
+        stockItems.forEach(s => { stockMap[s.id] = s; });
+      }
+
+      const comprasMap = {};
+      if (comprasData.data) {
+        comprasData.data.forEach(c => { comprasMap[c.id] = c; });
+      }
+
+      const channelsMap = {};
+      if (channelsData.data) {
+        channelsData.data.forEach(ch => { channelsMap[ch.id] = ch.name; });
+      }
+
+      const oppsMap = {};
+      if (oppsData) {
+        oppsData.forEach(opp => { oppsMap[opp.id] = opp.product_name; });
+      }
+
+      const enriched = ventas.map(venta => {
+        const stock = stockMap[venta.stock_id];
+        const compra = stock ? comprasMap[stock.compra_id] : null;
+        return {
+          ...venta,
+          canal_destino_name: channelsMap[venta.canal_destino_id] || null,
+          producto_name: compra && oppsMap[compra.oportunidad_id] ? oppsMap[compra.oportunidad_id] : null
+        };
+      });
+
+      return res.json(enriched);
+    }
+
+    res.json([]);
   } catch (error) {
     console.error('Unexpected error:', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
@@ -835,11 +1143,11 @@ app.delete('/stock/:id', async (req, res) => {
 
 app.get('/dashboard/immobilized-capital', async (req, res) => {
   try {
-    // Get all stock items with status 'in_stock'
+    // Get all stock items with available units
     const { data: stockItems, error } = await supabase
       .from('stock')
-      .select('units_purchased, real_purchase_price, stock_status')
-      .eq('stock_status', 'in_stock');
+      .select('unidades_disponibles, coste_unitario_real')
+      .gt('unidades_disponibles', 0);
 
     if (error) {
       console.error('Supabase error:', error);
@@ -847,14 +1155,13 @@ app.get('/dashboard/immobilized-capital', async (req, res) => {
     }
 
     // Calculate total immobilized capital
-    // Note: We assume remaining_units = units_purchased for now
-    // In a more complex scenario, you'd track units_sold separately
+    // Formula: unidades_disponibles × coste_unitario_real
     let totalValue = 0;
     if (stockItems && stockItems.length > 0) {
       totalValue = stockItems.reduce((sum, item) => {
-        const units = parseInt(item.units_purchased) || 0;
-        const price = parseFloat(item.real_purchase_price) || 0;
-        return sum + (units * price);
+        const unidades = parseInt(item.unidades_disponibles) || 0;
+        const costeUnitario = parseFloat(item.coste_unitario_real) || 0;
+        return sum + (unidades * costeUnitario);
       }, 0);
     }
 
@@ -876,6 +1183,7 @@ app.get('/dashboard/sales-over-time', async (req, res) => {
     if (range === 'custom' && start_date && end_date) {
       startDate = new Date(start_date);
       endDate = new Date(end_date);
+      endDate.setHours(23, 59, 59, 999); // Include full end date
     } else if (range === 'last-12-months') {
       endDate = new Date(now);
       startDate = new Date(now);
@@ -886,40 +1194,24 @@ app.get('/dashboard/sales-over-time', async (req, res) => {
       startDate.setMonth(startDate.getMonth() - 6);
     }
 
-    // Get stock items with status 'sold' within date range
-    const { data: soldItems, error: stockError } = await supabase
-      .from('stock')
-      .select('opportunity_id, units_purchased, real_purchase_price, updated_at')
-      .eq('stock_status', 'sold')
-      .gte('updated_at', startDate.toISOString())
-      .lte('updated_at', endDate.toISOString());
+    // Get ventas within date range (based on fecha_venta)
+    const { data: ventas, error } = await supabase
+      .from('ventas')
+      .select('fecha_venta, total_venta, unidades')
+      .gte('fecha_venta', startDate.toISOString().split('T')[0])
+      .lte('fecha_venta', endDate.toISOString().split('T')[0]);
 
-    if (stockError) {
-      console.error('Supabase error:', stockError);
-      return res.status(500).json({ error: 'Database error', details: stockError.message });
-    }
-
-    // Get related opportunities to get actual sale prices
-    const opportunityIds = soldItems ? soldItems.map(item => item.opportunity_id).filter(Boolean) : [];
-    
-    let opportunities = [];
-    if (opportunityIds.length > 0) {
-      const { data: opps, error: oppError } = await supabase
-        .from('opportunities')
-        .select('id, dest_price, real_sale_price')
-        .in('id', opportunityIds);
-
-      if (!oppError && opps) {
-        opportunities = opps;
-      }
+    if (error) {
+      console.error('Supabase error:', error);
+      return res.status(500).json({ error: 'Database error', details: error.message });
     }
 
     // Group by period
     const grouped = {};
     
-    if (soldItems && soldItems.length > 0) {
-      soldItems.forEach(item => {
-        const saleDate = new Date(item.updated_at);
+    if (ventas && ventas.length > 0) {
+      ventas.forEach(venta => {
+        const saleDate = new Date(venta.fecha_venta);
         let period;
         
         if (grouping === 'day') {
@@ -936,13 +1228,8 @@ app.get('/dashboard/sales-over-time', async (req, res) => {
           grouped[period] = 0;
         }
         
-        const units = parseInt(item.units_purchased) || 0;
-        const opp = opportunities.find(o => o.id === item.opportunity_id);
-        
-        // Use real_sale_price if available, otherwise use dest_price (estimated sale price)
-        const salePrice = opp ? (parseFloat(opp.real_sale_price) || parseFloat(opp.dest_price) || 0) : 0;
-        
-        grouped[period] += units * salePrice;
+        // Use total_venta (already calculated: precio_unitario * unidades - costes_venta)
+        grouped[period] += parseFloat(venta.total_venta) || 0;
       });
     }
 
@@ -970,6 +1257,7 @@ app.get('/dashboard/margins', async (req, res) => {
     if (range === 'custom' && start_date && end_date) {
       startDate = new Date(start_date);
       endDate = new Date(end_date);
+      endDate.setHours(23, 59, 59, 999);
     } else if (range === 'last-12-months') {
       endDate = new Date(now);
       startDate = new Date(now);
@@ -980,91 +1268,92 @@ app.get('/dashboard/margins', async (req, res) => {
       startDate.setMonth(startDate.getMonth() - 6);
     }
 
-    // Get sold stock items within date range
-    const { data: soldItems, error: stockError } = await supabase
+    // Get ventas within date range
+    const { data: ventas, error: ventasError } = await supabase
+      .from('ventas')
+      .select('id, stock_id, fecha_venta, total_venta, precio_unitario, unidades, costes_venta')
+      .gte('fecha_venta', startDate.toISOString().split('T')[0])
+      .lte('fecha_venta', endDate.toISOString().split('T')[0]);
+
+    if (ventasError) {
+      console.error('Supabase error:', ventasError);
+      return res.status(500).json({ error: 'Database error', details: ventasError.message });
+    }
+
+    if (!ventas || ventas.length === 0) {
+      return res.json([]);
+    }
+
+    // Get stock and compras data
+    const stockIds = [...new Set(ventas.map(v => v.stock_id))];
+    const { data: stockItems } = await supabase
       .from('stock')
-      .select('opportunity_id, units_purchased, real_purchase_price, updated_at')
-      .eq('stock_status', 'sold')
-      .gte('updated_at', startDate.toISOString())
-      .lte('updated_at', endDate.toISOString());
+      .select('id, compra_id, coste_unitario_real')
+      .in('id', stockIds);
 
-    if (stockError) {
-      console.error('Supabase error:', stockError);
-      return res.status(500).json({ error: 'Database error', details: stockError.message });
+    const compraIds = [...new Set(stockItems?.map(s => s.compra_id).filter(Boolean) || [])];
+    const { data: compras } = compraIds.length > 0
+      ? await supabase
+          .from('compras')
+          .select('id, total_compra, unidades, costes_compra')
+          .in('id', compraIds)
+      : { data: [] };
+
+    // Create maps for quick lookup
+    const stockMap = {};
+    if (stockItems) {
+      stockItems.forEach(s => { stockMap[s.id] = s; });
     }
 
-    // Get related opportunities to calculate margins
-    const opportunityIds = soldItems ? soldItems.map(item => item.opportunity_id).filter(Boolean) : [];
-    
-    let opportunities = [];
-    if (opportunityIds.length > 0) {
-      const { data: opps, error: oppError } = await supabase
-        .from('opportunities')
-        .select('id, origin_price, dest_price, real_sale_price')
-        .in('id', opportunityIds);
-
-      if (!oppError && opps) {
-        opportunities = opps;
-      }
-    }
-
-    // Get opportunity costs
-    const oppCostsMap = {};
-    if (opportunityIds.length > 0) {
-      const { data: costs, error: costsError } = await supabase
-        .from('opportunity_costs')
-        .select('opportunity_id, type, value, base')
-        .in('opportunity_id', opportunityIds);
-
-      if (!costsError && costs) {
-        costs.forEach(cost => {
-          if (!oppCostsMap[cost.opportunity_id]) {
-            oppCostsMap[cost.opportunity_id] = [];
-          }
-          oppCostsMap[cost.opportunity_id].push(cost);
-        });
-      }
+    const comprasMap = {};
+    if (compras) {
+      compras.forEach(c => { comprasMap[c.id] = c; });
     }
 
     // Group by month and calculate margins
     const monthlyMargins = {};
     
-    if (soldItems && soldItems.length > 0) {
-      soldItems.forEach(item => {
-        const saleDate = new Date(item.updated_at);
-        const month = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
-        
-        if (!monthlyMargins[month]) {
-          monthlyMargins[month] = { gross_margin: 0, net_margin: 0 };
-        }
-        
-        const opp = opportunities.find(o => o.id === item.opportunity_id);
-        const units = parseInt(item.units_purchased) || 0;
-        const purchasePrice = parseFloat(item.real_purchase_price) || 0;
-        const salePrice = opp ? (parseFloat(opp.real_sale_price) || parseFloat(opp.dest_price) || 0) : (purchasePrice * 1.2);
-        
-        // Gross margin = (sale price - purchase price) * units
-        const grossMargin = (salePrice - purchasePrice) * units;
-        monthlyMargins[month].gross_margin += grossMargin;
-        
-        // Calculate costs
-        let totalCosts = 0;
-        if (opp && oppCostsMap[opp.id]) {
-          oppCostsMap[opp.id].forEach(cost => {
-            if (cost.type === 'fixed') {
-              totalCosts += parseFloat(cost.value) || 0;
-            } else if (cost.type === 'percentage') {
-              const base = cost.base === 'purchase' ? purchasePrice : salePrice;
-              totalCosts += (base * (parseFloat(cost.value) || 0) / 100);
-            }
-          });
-        }
-        
-        // Net margin = (sale price - purchase price - costs) * units
-        const netMargin = (salePrice - purchasePrice - (totalCosts / units)) * units;
-        monthlyMargins[month].net_margin += netMargin;
-      });
-    }
+    ventas.forEach(venta => {
+      const saleDate = new Date(venta.fecha_venta);
+      const month = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!monthlyMargins[month]) {
+        monthlyMargins[month] = { gross_margin: 0, net_margin: 0 };
+      }
+      
+      const stock = stockMap[venta.stock_id];
+      if (!stock) return;
+
+      const compra = comprasMap[stock.compra_id];
+      if (!compra) return;
+
+      // Calculate coste de compra proporcional
+      const unidadesVendidas = parseInt(venta.unidades) || 0;
+      const costeUnitarioCompra = stock.coste_unitario_real;
+      const costeCompraProporcional = costeUnitarioCompra * unidadesVendidas;
+
+      // Calculate total venta (ya incluye descuento de costes_venta)
+      const totalVenta = parseFloat(venta.total_venta) || 0;
+
+      // Gross margin = total_venta - coste_compra_proporcional
+      const grossMargin = totalVenta - costeCompraProporcional;
+      monthlyMargins[month].gross_margin += grossMargin;
+
+      // Calculate costes de venta (ya están descontados en total_venta, pero los incluimos para net margin)
+      const costesVentaArray = Array.isArray(venta.costes_venta) ? venta.costes_venta : [];
+      const totalCostesVenta = costesVentaArray.reduce((sum, coste) => {
+        return sum + (parseFloat(coste.value) || 0);
+      }, 0);
+
+      // Net margin = total_venta - coste_compra_proporcional - costes_venta
+      // Pero total_venta ya incluye descuento de costes_venta, así que:
+      // Net margin = (precio_unitario * unidades) - coste_compra_proporcional - costes_venta
+      const precioUnitario = parseFloat(venta.precio_unitario) || 0;
+      const ingresosBrutos = precioUnitario * unidadesVendidas;
+      const netMargin = ingresosBrutos - costeCompraProporcional - totalCostesVenta;
+      
+      monthlyMargins[month].net_margin += netMargin;
+    });
 
     // Convert to array format
     const result = Object.entries(monthlyMargins).map(([month, margins]) => ({
