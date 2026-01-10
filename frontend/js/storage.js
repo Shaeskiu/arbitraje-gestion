@@ -1,5 +1,5 @@
 const storage = {
-    apiBaseUrl: 'https://arbitraje-gestion-production.up.railway.app/',
+    apiBaseUrl: 'https://arbitraje-gestion-production.up.railway.app',
     
     async getAll() {
         try {
