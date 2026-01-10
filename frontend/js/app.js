@@ -53,6 +53,14 @@ const app = {
             });
         }
         
+        const conversionForm = document.getElementById('conversion-form');
+        if (conversionForm) {
+            conversionForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.convertToStock();
+            });
+        }
+        
         ['origin-price', 'dest-price', 'real-sale-price'].forEach(id => {
             const element = document.getElementById(id);
             if (element) {
@@ -115,6 +123,8 @@ const app = {
             this.initializeOpportunityForm();
         } else if (viewName === 'channel-form') {
             this.initializeChannelForm();
+        } else if (viewName === 'stock') {
+            this.refreshStock();
         }
     },
     
@@ -673,6 +683,102 @@ const app = {
                 console.error('Error deleting opportunity:', error);
                 alert('Error al eliminar la oportunidad.');
             }
+        }
+    },
+    
+    openConversionModal(opportunityId, estimatedPrice) {
+        const modal = document.getElementById('conversion-modal');
+        const opportunityIdInput = document.getElementById('conversion-opportunity-id');
+        const realPriceInput = document.getElementById('conversion-real-price');
+        const unitsInput = document.getElementById('conversion-units');
+        
+        if (!modal || !opportunityIdInput || !realPriceInput || !unitsInput) {
+            console.error('Conversion modal elements not found');
+            return;
+        }
+        
+        opportunityIdInput.value = opportunityId;
+        realPriceInput.value = estimatedPrice || '';
+        unitsInput.value = 1;
+        modal.classList.remove('hidden');
+    },
+    
+    closeConversionModal() {
+        const modal = document.getElementById('conversion-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+        
+        const form = document.getElementById('conversion-form');
+        if (form) {
+            form.reset();
+        }
+    },
+    
+    closeConversionModalOnOverlay(event) {
+        if (event.target.id === 'conversion-modal') {
+            this.closeConversionModal();
+        }
+    },
+    
+    async convertToStock() {
+        const opportunityId = document.getElementById('conversion-opportunity-id').value;
+        const realPrice = document.getElementById('conversion-real-price').value;
+        const units = document.getElementById('conversion-units').value;
+        
+        if (!opportunityId || !realPrice || !units) {
+            alert('Por favor, completa todos los campos');
+            return;
+        }
+        
+        if (parseFloat(realPrice) < 0) {
+            alert('El precio de compra debe ser mayor o igual a 0');
+            return;
+        }
+        
+        if (parseInt(units) <= 0) {
+            alert('Las unidades deben ser mayor a 0');
+            return;
+        }
+        
+        try {
+            await stockStorage.convertFromOpportunity(opportunityId, realPrice, units);
+            this.closeConversionModal();
+            await this.loadChannels();
+            this.refreshDashboard();
+            alert('Oportunidad convertida a stock exitosamente');
+        } catch (error) {
+            console.error('Error converting to stock:', error);
+            alert('Error al convertir a stock: ' + (error.message || 'Error desconocido'));
+        }
+    },
+    
+    async refreshStock() {
+        try {
+            const stockItems = await stockStorage.getAll();
+            ui.renderStock(stockItems);
+        } catch (error) {
+            console.error('Error refreshing stock:', error);
+            alert('Error al cargar el stock.');
+        }
+    },
+    
+    async deleteStock(id) {
+        if (!confirm('¿Estás seguro de que quieres eliminar este item de stock?')) {
+            return;
+        }
+        
+        try {
+            if (!id || typeof id !== 'string') {
+                alert('ID de stock inválido');
+                return;
+            }
+            
+            await stockStorage.delete(id);
+            this.refreshStock();
+        } catch (error) {
+            console.error('Error deleting stock:', error);
+            alert('Error al eliminar el item de stock: ' + (error.message || 'Error desconocido'));
         }
     }
 };

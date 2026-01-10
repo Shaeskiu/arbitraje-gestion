@@ -50,6 +50,7 @@ app.get('/opportunities', async (req, res) => {
           source
         )
       `)
+      .neq('status', 'converted')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -597,6 +598,222 @@ app.delete('/channels/:id', async (req, res) => {
 
     const { error } = await supabase
       .from('channels')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return res.status(500).json({ error: 'Database error', details: error.message });
+    }
+
+    res.status(204).send();
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// ============================================
+// STOCK ENDPOINTS
+// ============================================
+
+app.post('/stock/from-opportunity', async (req, res) => {
+  try {
+    const { opportunity_id, real_purchase_price, units } = req.body;
+
+    if (!opportunity_id || typeof opportunity_id !== 'string' || !isValidUUID(opportunity_id)) {
+      return res.status(400).json({ error: 'Valid opportunity_id is required' });
+    }
+
+    if (real_purchase_price === undefined || real_purchase_price === null || parseFloat(real_purchase_price) < 0) {
+      return res.status(400).json({ error: 'Valid real_purchase_price is required (>= 0)' });
+    }
+
+    if (!units || parseInt(units) <= 0) {
+      return res.status(400).json({ error: 'Valid units is required (> 0)' });
+    }
+
+    // Get the opportunity to convert
+    const { data: opportunity, error: oppError } = await supabase
+      .from('opportunities')
+      .select('*')
+      .eq('id', opportunity_id)
+      .single();
+
+    if (oppError || !opportunity) {
+      return res.status(404).json({ error: 'Opportunity not found' });
+    }
+
+    if (opportunity.status === 'converted') {
+      return res.status(400).json({ error: 'Opportunity is already converted' });
+    }
+
+    // Get the channel name and ID
+    let purchaseChannel = opportunity.origin_channel || '';
+    let purchaseChannelId = opportunity.origin_channel_id || null;
+
+    if (opportunity.origin_channel_id) {
+      const { data: channel } = await supabase
+        .from('channels')
+        .select('name')
+        .eq('id', opportunity.origin_channel_id)
+        .single();
+      
+      if (channel) {
+        purchaseChannel = channel.name;
+      }
+    }
+
+    // Create stock record
+    const { data: stock, error: stockError } = await supabase
+      .from('stock')
+      .insert({
+        opportunity_id: opportunity_id,
+        product_name: opportunity.product_name,
+        purchase_channel: purchaseChannel,
+        purchase_channel_id: purchaseChannelId,
+        real_purchase_price: parseFloat(real_purchase_price),
+        units_purchased: parseInt(units),
+        purchase_date: new Date().toISOString().split('T')[0],
+        stock_status: 'in_stock',
+        notes: opportunity.notes || null
+      })
+      .select()
+      .single();
+
+    if (stockError) {
+      console.error('Error creating stock:', stockError);
+      return res.status(500).json({ error: 'Error creating stock', details: stockError.message });
+    }
+
+    // Update opportunity status to 'converted'
+    const { error: updateError } = await supabase
+      .from('opportunities')
+      .update({ status: 'converted' })
+      .eq('id', opportunity_id);
+
+    if (updateError) {
+      console.error('Error updating opportunity status:', updateError);
+      // Try to delete the stock record we just created
+      await supabase.from('stock').delete().eq('id', stock.id);
+      return res.status(500).json({ error: 'Error updating opportunity status', details: updateError.message });
+    }
+
+    res.status(201).json(stock);
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.get('/stock', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('stock')
+      .select('*')
+      .order('purchase_date', { ascending: false });
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return res.status(500).json({ error: 'Database error', details: error.message });
+    }
+
+    res.json(data || []);
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.get('/stock/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid stock ID' });
+    }
+
+    const { data, error } = await supabase
+      .from('stock')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Stock item not found' });
+      }
+      console.error('Supabase error:', error);
+      return res.status(500).json({ error: 'Database error', details: error.message });
+    }
+
+    if (!data) {
+      return res.status(404).json({ error: 'Stock item not found' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.put('/stock/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid stock ID' });
+    }
+
+    const { product_name, purchase_channel, purchase_channel_id, real_purchase_price, units_purchased, purchase_date, stock_status, notes } = req.body;
+
+    const updateData = {};
+    if (product_name !== undefined) updateData.product_name = String(product_name).trim();
+    if (purchase_channel !== undefined) updateData.purchase_channel = String(purchase_channel).trim();
+    if (purchase_channel_id !== undefined) updateData.purchase_channel_id = purchase_channel_id || null;
+    if (real_purchase_price !== undefined) updateData.real_purchase_price = parseFloat(real_purchase_price);
+    if (units_purchased !== undefined) updateData.units_purchased = parseInt(units_purchased);
+    if (purchase_date !== undefined) updateData.purchase_date = String(purchase_date);
+    if (stock_status !== undefined) updateData.stock_status = String(stock_status);
+    if (notes !== undefined) updateData.notes = notes ? String(notes).trim() : null;
+
+    const { data, error } = await supabase
+      .from('stock')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Stock item not found' });
+      }
+      console.error('Supabase error:', error);
+      return res.status(500).json({ error: 'Database error', details: error.message });
+    }
+
+    if (!data) {
+      return res.status(404).json({ error: 'Stock item not found' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.delete('/stock/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid stock ID' });
+    }
+
+    const { error } = await supabase
+      .from('stock')
       .delete()
       .eq('id', id);
 

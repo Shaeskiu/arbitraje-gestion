@@ -69,8 +69,13 @@ const ui = {
                         ${this.capitalize(opportunity.status)}
                     </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button onclick="app.showDetail('${opportunity.id}')" class="text-indigo-600 hover:text-indigo-900">Ver</button>
+                    <button onclick="app.openConversionModal('${opportunity.id}', ${opportunity.originPrice})" class="text-green-600 hover:text-green-900" title="Convertir a Stock">
+                        <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                    </button>
                 </td>
             `;
             
@@ -654,5 +659,74 @@ const ui = {
         
         originSelect.innerHTML = options;
         destSelect.innerHTML = options;
+    },
+    
+    renderStock(stockItems) {
+        const tbody = document.getElementById('stock-table');
+        if (!tbody) {
+            console.error('Stock table body not found');
+            return;
+        }
+        
+        tbody.innerHTML = '';
+        
+        if (!stockItems || stockItems.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">No hay stock</td></tr>';
+            return;
+        }
+        
+        stockItems.forEach(stock => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50';
+            
+            const totalValue = stock.realPurchasePrice * stock.unitsPurchased;
+            const formattedDate = stock.purchaseDate ? new Date(stock.purchaseDate).toLocaleDateString('es-ES') : 'N/A';
+            
+            const statusColors = {
+                'in_stock': 'bg-blue-100 text-blue-800',
+                'sold': 'bg-green-100 text-green-800',
+                'returned': 'bg-red-100 text-red-800'
+            };
+            
+            const statusLabels = {
+                'in_stock': 'En Stock',
+                'sold': 'Vendido',
+                'returned': 'Devuelto'
+            };
+            
+            const statusClass = statusColors[stock.stockStatus] || 'bg-gray-100 text-gray-800';
+            const statusLabel = statusLabels[stock.stockStatus] || stock.stockStatus;
+            
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${this.escapeHtml(stock.productName)}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${this.escapeHtml(stock.purchaseChannel || 'N/A')}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">€${parseFloat(stock.realPurchasePrice).toFixed(2)}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${stock.unitsPurchased}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">€${totalValue.toFixed(2)}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-500">${formattedDate}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                        ${statusLabel}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button onclick="app.deleteStock('${stock.id}')" class="text-red-600 hover:text-red-900">Eliminar</button>
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
     }
 };
