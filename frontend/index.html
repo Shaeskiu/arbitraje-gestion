@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Arbitraje Comercial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [data-view] {
+            display: none;
+        }
+        [data-view].active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 h-screen overflow-hidden">
+    <div class="flex h-screen">
+        <aside class="w-64 bg-white shadow-lg border-r border-gray-200">
+            <div class="p-6">
+                <h1 class="text-xl font-bold text-gray-900 mb-8">Arbitraje Gestión</h1>
+                <nav class="space-y-2">
+                    <button data-nav="dashboard" class="nav-link w-full text-left px-4 py-3 text-sm font-medium bg-indigo-50 text-indigo-700 rounded-md transition-colors">
+                        Oportunidades
+                    </button>
+                    <button data-nav="channels" class="nav-link w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors">
+                        Canales
+                    </button>
+                </nav>
+            </div>
+        </aside>
+
+        <main class="flex-1 overflow-auto p-6">
+        <div data-view="dashboard" class="active w-full h-full">
+            <div class="w-full h-full">
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold text-gray-900">Oportunidades</h2>
+                        <button onclick="app.showView('new')" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                            + Nueva Oportunidad
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="text-2xl font-semibold text-gray-900" id="total-opportunities">0</div>
+                                        <div class="text-sm text-gray-500">Total Oportunidades</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="text-2xl font-semibold text-green-600" id="capital-inmovilizado">€0</div>
+                                        <div class="text-sm text-gray-500">Capital Inmovilizado</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="text-2xl font-semibold text-blue-600" id="total-margen-potencial">€0</div>
+                                        <div class="text-sm text-gray-500">Margen Potencial (Estimado)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="text-2xl font-semibold text-purple-600" id="avg-rentabilidad">0%</div>
+                                        <div class="text-sm text-gray-500">Rentabilidad Media (Estimada)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" id="dashboard-real-metrics" style="display: none;">
+                        <div class="bg-green-50 border border-green-200 overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="text-2xl font-semibold text-green-700" id="total-margen-real">€0</div>
+                                        <div class="text-sm text-green-600">Margen Real Total</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-green-50 border border-green-200 overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="text-2xl font-semibold text-green-700" id="avg-rentabilidad-real">0%</div>
+                                        <div class="text-sm text-green-600">Rentabilidad Media Real</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white shadow rounded-lg">
+                    <div class="p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-medium text-gray-900">Oportunidades</h3>
+                            <div class="flex gap-2">
+                                <select id="filter-status" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                    <option value="">Todos los estados</option>
+                                    <option value="detectado">Detectado</option>
+                                    <option value="analizado">Analizado</option>
+                                    <option value="aprobado">Aprobado</option>
+                                    <option value="comprado">Comprado</option>
+                                    <option value="vendido">Vendido</option>
+                                    <option value="descartado">Descartado</option>
+                                </select>
+                                <input type="text" id="search-input" placeholder="Buscar..." class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Origen → Destino</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precios</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Margen</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rentabilidad</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="opportunities-table" class="bg-white divide-y divide-gray-200">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div data-view="new" class="w-full">
+            <div class="bg-white shadow rounded-lg">
+                <div class="p-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6" id="form-title">Nueva Oportunidad</h2>
+                    <form id="opportunity-form" class="space-y-6">
+                        <input type="hidden" id="opportunity-id">
+                        
+                        <div>
+                            <label for="product-name" class="block text-sm font-medium text-gray-700">Producto</label>
+                            <input type="text" id="product-name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="origin-channel-select" class="block text-sm font-medium text-gray-700">Canal Origen</label>
+                                <select id="origin-channel-select" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                    <option value="">Selecciona un canal</option>
+                                </select>
+                                <input type="hidden" id="origin-channel-id">
+                            </div>
+                            <div>
+                                <label for="origin-price" class="block text-sm font-medium text-gray-700">Precio Compra (€)</label>
+                                <input type="number" id="origin-price" step="0.01" min="0" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="dest-channel-select" class="block text-sm font-medium text-gray-700">Canal Destino</label>
+                                <select id="dest-channel-select" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                    <option value="">Selecciona un canal</option>
+                                </select>
+                                <input type="hidden" id="dest-channel-id">
+                            </div>
+                            <div>
+                                <label for="dest-price" class="block text-sm font-medium text-gray-700">Precio Venta Estimado (€)</label>
+                                <input type="number" id="dest-price" step="0.01" min="0" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <p class="mt-1 text-xs text-gray-500">Precio al que esperas vender</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="real-sale-price" class="block text-sm font-medium text-gray-700">Precio Real de Venta (€)</label>
+                            <input type="number" id="real-sale-price" step="0.01" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <p class="mt-1 text-xs text-gray-500">Opcional: Precio al que realmente vendiste</p>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="block text-sm font-medium text-gray-700">Costes</label>
+                                <button type="button" onclick="app.addCost()" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">+ Añadir Coste</button>
+                            </div>
+                            <div id="costs-list" class="space-y-3">
+                            </div>
+                            <div id="costs-breakdown" class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <div class="text-xs font-medium text-blue-900 mb-2">Desglose de Costes:</div>
+                                <div id="costs-breakdown-content" class="text-xs text-blue-800 space-y-1">
+                                    <div>Ningún coste añadido</div>
+                                </div>
+                                <div class="mt-2 pt-2 border-t border-blue-200">
+                                    <span class="text-xs font-semibold text-blue-900">Total Costes: </span>
+                                    <span id="costs-total" class="text-xs font-bold text-blue-900">€0.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="status" class="block text-sm font-medium text-gray-700">Estado</label>
+                            <select id="status" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <option value="detectado">Detectado</option>
+                                <option value="analizado">Analizado</option>
+                                <option value="aprobado">Aprobado</option>
+                                <option value="comprado">Comprado</option>
+                                <option value="vendido">Vendido</option>
+                                <option value="descartado">Descartado</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="notes" class="block text-sm font-medium text-gray-700">Notas</label>
+                            <textarea id="notes" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
+                        </div>
+
+                        <div class="bg-gray-50 p-4 rounded-lg space-y-4">
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-700 mb-3">Cálculos Estimados</h3>
+                                <div class="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <span class="text-gray-500">Margen Bruto Estimado:</span>
+                                        <span id="calc-margin-bruto" class="ml-2 font-semibold">€0.00</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">Costes Totales:</span>
+                                        <span id="calc-costes-totales" class="ml-2 font-semibold">€0.00</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">Margen Neto Estimado:</span>
+                                        <span id="calc-margin-neto" class="ml-2 font-semibold">€0.00</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">Rentabilidad Estimada:</span>
+                                        <span id="calc-rentabilidad" class="ml-2 font-semibold">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="calc-real-section" style="display: none;">
+                                <div class="border-t border-gray-300 pt-3">
+                                    <h3 class="text-sm font-medium text-gray-700 mb-3">Cálculos Reales</h3>
+                                    <div class="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <span class="text-gray-500">Margen Neto Real:</span>
+                                            <span id="calc-margin-neto-real" class="ml-2 font-semibold">€0.00</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-500">Rentabilidad Real:</span>
+                                            <span id="calc-rentabilidad-real" class="ml-2 font-semibold">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 pt-3 border-t border-gray-300">
+                                        <div class="text-sm">
+                                            <span class="text-gray-500">Diferencia (Real - Estimado):</span>
+                                            <span id="calc-diferencia" class="ml-2 font-semibold">€0.00</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" onclick="app.showView('dashboard')" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                                Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div data-view="detail" class="w-full">
+            <div class="bg-white shadow rounded-lg">
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-6">
+                        <h2 class="text-2xl font-bold text-gray-900" id="detail-product-name">-</h2>
+                        <button onclick="app.showView('dashboard')" class="text-gray-400 hover:text-gray-500">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500 mb-2">Canal Origen</h3>
+                            <p class="text-lg font-semibold text-gray-900" id="detail-origin-channel">-</p>
+                            <p class="text-sm text-gray-600" id="detail-origin-price">-</p>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500 mb-2">Canal Destino</h3>
+                            <p class="text-lg font-semibold text-gray-900" id="detail-dest-channel">-</p>
+                            <p class="text-sm text-gray-600" id="detail-dest-price">-</p>
+                            <p class="text-sm text-gray-600 mt-1" id="detail-real-price" style="display: none;"></p>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">Métricas Estimadas</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                                <div class="text-xs text-blue-600 font-medium mb-1">Margen Bruto Estimado</div>
+                                <div class="text-xl font-bold text-blue-900" id="detail-margin-bruto">€0.00</div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <div class="text-xs text-gray-600 mb-1">Costes Totales</div>
+                                <div class="text-xl font-bold text-gray-900" id="detail-costes-totales">€0.00</div>
+                            </div>
+                            <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                                <div class="text-xs text-blue-600 font-medium mb-1">Margen Neto Estimado</div>
+                                <div class="text-xl font-bold text-blue-900" id="detail-margin-neto">€0.00</div>
+                            </div>
+                            <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                                <div class="text-xs text-blue-600 font-medium mb-1">Rentabilidad Estimada</div>
+                                <div class="text-xl font-bold text-blue-900" id="detail-rentabilidad">0%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-6" id="detail-real-section" style="display: none;">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">Métricas Reales</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="bg-green-50 border border-green-200 p-4 rounded-lg">
+                                <div class="text-xs text-green-600 font-medium mb-1">Margen Neto Real</div>
+                                <div class="text-xl font-bold text-green-900" id="detail-margin-neto-real">€0.00</div>
+                            </div>
+                            <div class="bg-green-50 border border-green-200 p-4 rounded-lg">
+                                <div class="text-xs text-green-600 font-medium mb-1">Rentabilidad Real</div>
+                                <div class="text-xl font-bold text-green-900" id="detail-rentabilidad-real">0%</div>
+                            </div>
+                            <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                                <div class="text-xs text-yellow-700 font-medium mb-1">Diferencia</div>
+                                <div class="text-xl font-bold text-yellow-900" id="detail-diferencia">€0.00</div>
+                                <div class="text-xs text-gray-500 mt-1" id="detail-diferencia-label">Real - Estimado</div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <div class="text-xs text-gray-600 mb-1">Precisión</div>
+                                <div class="text-xl font-bold text-gray-900" id="detail-precision">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label for="detail-status" class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+                        <select id="detail-status" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <option value="detectado">Detectado</option>
+                            <option value="analizado">Analizado</option>
+                            <option value="aprobado">Aprobado</option>
+                            <option value="comprado">Comprado</option>
+                            <option value="vendido">Vendido</option>
+                            <option value="descartado">Descartado</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-6">
+                        <label for="detail-real-sale-price" class="block text-sm font-medium text-gray-700 mb-2">Precio Real de Venta (€)</label>
+                        <input type="number" id="detail-real-sale-price" step="0.01" min="0" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <p class="mt-1 text-xs text-gray-500">Opcional: Precio al que realmente vendiste</p>
+                    </div>
+
+                    <div class="mb-6">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-sm font-medium text-gray-700">Costes</label>
+                            <button type="button" onclick="app.addCostDetail()" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">+ Añadir Coste</button>
+                        </div>
+                        <div id="detail-costs-list" class="space-y-3">
+                        </div>
+                        <div id="detail-costs-breakdown" class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <div class="text-xs font-medium text-blue-900 mb-2">Desglose de Costes:</div>
+                            <div id="detail-costs-breakdown-content" class="text-xs text-blue-800 space-y-1">
+                                <div>Ningún coste añadido</div>
+                            </div>
+                            <div class="mt-2 pt-2 border-t border-blue-200">
+                                <span class="text-xs font-semibold text-blue-900">Total Costes: </span>
+                                <span id="detail-costs-total" class="text-xs font-bold text-blue-900">€0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label for="detail-notes" class="block text-sm font-medium text-gray-700 mb-2">Notas</label>
+                        <textarea id="detail-notes" rows="4" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
+                    </div>
+
+                    <div class="flex justify-end space-x-3">
+                        <button onclick="app.showView('dashboard')" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                            Volver
+                        </button>
+                        <button onclick="app.saveDetail()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                            Guardar Cambios
+                        </button>
+                        <button onclick="app.deleteOpportunity()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">
+                            Eliminar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div data-view="channels" class="w-full">
+            <div class="mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-900">Gestión de Canales</h2>
+                    <button onclick="app.showChannelForm()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                        + Nuevo Canal
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white shadow rounded-lg">
+                <div class="p-6">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Costes Origen</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Costes Destino</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="channels-table" class="bg-white divide-y divide-gray-200">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div data-view="channel-form" class="w-full">
+            <div class="bg-white shadow rounded-lg">
+                <div class="p-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6" id="channel-form-title">Nuevo Canal</h2>
+                    <form id="channel-form" class="space-y-6">
+                        <input type="hidden" id="channel-id">
+                        
+                        <div>
+                            <label for="channel-name" class="block text-sm font-medium text-gray-700">Nombre del Canal</label>
+                            <input type="text" id="channel-name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="block text-sm font-medium text-gray-700">Costes de Origen</label>
+                                    <button type="button" onclick="app.addChannelCost('origin')" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">+ Añadir</button>
+                                </div>
+                                <div id="channel-origin-costs-list" class="space-y-3 border border-gray-200 rounded-lg p-4 bg-gray-50 min-h-[200px]">
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="block text-sm font-medium text-gray-700">Costes de Destino</label>
+                                    <button type="button" onclick="app.addChannelCost('destination')" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">+ Añadir</button>
+                                </div>
+                                <div id="channel-dest-costs-list" class="space-y-3 border border-gray-200 rounded-lg p-4 bg-gray-50 min-h-[200px]">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" onclick="app.showView('channels')" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                                Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/storage.js"></script>
+    <script src="js/arbitrage.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
