@@ -829,6 +829,257 @@ app.delete('/stock/:id', async (req, res) => {
   }
 });
 
+// ============================================
+// DASHBOARD ENDPOINTS
+// ============================================
+
+app.get('/dashboard/immobilized-capital', async (req, res) => {
+  try {
+    // Get all stock items with status 'in_stock'
+    const { data: stockItems, error } = await supabase
+      .from('stock')
+      .select('units_purchased, real_purchase_price, stock_status')
+      .eq('stock_status', 'in_stock');
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return res.status(500).json({ error: 'Database error', details: error.message });
+    }
+
+    // Calculate total immobilized capital
+    // Note: We assume remaining_units = units_purchased for now
+    // In a more complex scenario, you'd track units_sold separately
+    let totalValue = 0;
+    if (stockItems && stockItems.length > 0) {
+      totalValue = stockItems.reduce((sum, item) => {
+        const units = parseInt(item.units_purchased) || 0;
+        const price = parseFloat(item.real_purchase_price) || 0;
+        return sum + (units * price);
+      }, 0);
+    }
+
+    res.json({ value: totalValue });
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.get('/dashboard/sales-over-time', async (req, res) => {
+  try {
+    const { grouping = 'month', range = 'last-6-months', start_date, end_date } = req.query;
+
+    // Determine date range
+    let startDate, endDate;
+    const now = new Date();
+    
+    if (range === 'custom' && start_date && end_date) {
+      startDate = new Date(start_date);
+      endDate = new Date(end_date);
+    } else if (range === 'last-12-months') {
+      endDate = new Date(now);
+      startDate = new Date(now);
+      startDate.setMonth(startDate.getMonth() - 12);
+    } else { // last-6-months (default)
+      endDate = new Date(now);
+      startDate = new Date(now);
+      startDate.setMonth(startDate.getMonth() - 6);
+    }
+
+    // Get stock items with status 'sold' within date range
+    const { data: soldItems, error: stockError } = await supabase
+      .from('stock')
+      .select('opportunity_id, units_purchased, real_purchase_price, updated_at')
+      .eq('stock_status', 'sold')
+      .gte('updated_at', startDate.toISOString())
+      .lte('updated_at', endDate.toISOString());
+
+    if (stockError) {
+      console.error('Supabase error:', stockError);
+      return res.status(500).json({ error: 'Database error', details: stockError.message });
+    }
+
+    // Get related opportunities to get actual sale prices
+    const opportunityIds = soldItems ? soldItems.map(item => item.opportunity_id).filter(Boolean) : [];
+    
+    let opportunities = [];
+    if (opportunityIds.length > 0) {
+      const { data: opps, error: oppError } = await supabase
+        .from('opportunities')
+        .select('id, dest_price, real_sale_price')
+        .in('id', opportunityIds);
+
+      if (!oppError && opps) {
+        opportunities = opps;
+      }
+    }
+
+    // Group by period
+    const grouped = {};
+    
+    if (soldItems && soldItems.length > 0) {
+      soldItems.forEach(item => {
+        const saleDate = new Date(item.updated_at);
+        let period;
+        
+        if (grouping === 'day') {
+          period = saleDate.toISOString().split('T')[0];
+        } else if (grouping === 'week') {
+          const weekStart = new Date(saleDate);
+          weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+          period = `W${weekStart.toISOString().split('T')[0]}`;
+        } else { // month
+          period = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
+        }
+        
+        if (!grouped[period]) {
+          grouped[period] = 0;
+        }
+        
+        const units = parseInt(item.units_purchased) || 0;
+        const opp = opportunities.find(o => o.id === item.opportunity_id);
+        
+        // Use real_sale_price if available, otherwise use dest_price (estimated sale price)
+        const salePrice = opp ? (parseFloat(opp.real_sale_price) || parseFloat(opp.dest_price) || 0) : 0;
+        
+        grouped[period] += units * salePrice;
+      });
+    }
+
+    // Convert to array format
+    const result = Object.entries(grouped).map(([period, amount]) => ({
+      period,
+      amount: parseFloat(amount.toFixed(2))
+    })).sort((a, b) => a.period.localeCompare(b.period));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.get('/dashboard/margins', async (req, res) => {
+  try {
+    const { range = 'last-6-months', start_date, end_date } = req.query;
+
+    // Determine date range
+    let startDate, endDate;
+    const now = new Date();
+    
+    if (range === 'custom' && start_date && end_date) {
+      startDate = new Date(start_date);
+      endDate = new Date(end_date);
+    } else if (range === 'last-12-months') {
+      endDate = new Date(now);
+      startDate = new Date(now);
+      startDate.setMonth(startDate.getMonth() - 12);
+    } else { // last-6-months (default)
+      endDate = new Date(now);
+      startDate = new Date(now);
+      startDate.setMonth(startDate.getMonth() - 6);
+    }
+
+    // Get sold stock items within date range
+    const { data: soldItems, error: stockError } = await supabase
+      .from('stock')
+      .select('opportunity_id, units_purchased, real_purchase_price, updated_at')
+      .eq('stock_status', 'sold')
+      .gte('updated_at', startDate.toISOString())
+      .lte('updated_at', endDate.toISOString());
+
+    if (stockError) {
+      console.error('Supabase error:', stockError);
+      return res.status(500).json({ error: 'Database error', details: stockError.message });
+    }
+
+    // Get related opportunities to calculate margins
+    const opportunityIds = soldItems ? soldItems.map(item => item.opportunity_id).filter(Boolean) : [];
+    
+    let opportunities = [];
+    if (opportunityIds.length > 0) {
+      const { data: opps, error: oppError } = await supabase
+        .from('opportunities')
+        .select('id, origin_price, dest_price, real_sale_price')
+        .in('id', opportunityIds);
+
+      if (!oppError && opps) {
+        opportunities = opps;
+      }
+    }
+
+    // Get opportunity costs
+    const oppCostsMap = {};
+    if (opportunityIds.length > 0) {
+      const { data: costs, error: costsError } = await supabase
+        .from('opportunity_costs')
+        .select('opportunity_id, type, value, base')
+        .in('opportunity_id', opportunityIds);
+
+      if (!costsError && costs) {
+        costs.forEach(cost => {
+          if (!oppCostsMap[cost.opportunity_id]) {
+            oppCostsMap[cost.opportunity_id] = [];
+          }
+          oppCostsMap[cost.opportunity_id].push(cost);
+        });
+      }
+    }
+
+    // Group by month and calculate margins
+    const monthlyMargins = {};
+    
+    if (soldItems && soldItems.length > 0) {
+      soldItems.forEach(item => {
+        const saleDate = new Date(item.updated_at);
+        const month = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        if (!monthlyMargins[month]) {
+          monthlyMargins[month] = { gross_margin: 0, net_margin: 0 };
+        }
+        
+        const opp = opportunities.find(o => o.id === item.opportunity_id);
+        const units = parseInt(item.units_purchased) || 0;
+        const purchasePrice = parseFloat(item.real_purchase_price) || 0;
+        const salePrice = opp ? (parseFloat(opp.real_sale_price) || parseFloat(opp.dest_price) || 0) : (purchasePrice * 1.2);
+        
+        // Gross margin = (sale price - purchase price) * units
+        const grossMargin = (salePrice - purchasePrice) * units;
+        monthlyMargins[month].gross_margin += grossMargin;
+        
+        // Calculate costs
+        let totalCosts = 0;
+        if (opp && oppCostsMap[opp.id]) {
+          oppCostsMap[opp.id].forEach(cost => {
+            if (cost.type === 'fixed') {
+              totalCosts += parseFloat(cost.value) || 0;
+            } else if (cost.type === 'percentage') {
+              const base = cost.base === 'purchase' ? purchasePrice : salePrice;
+              totalCosts += (base * (parseFloat(cost.value) || 0) / 100);
+            }
+          });
+        }
+        
+        // Net margin = (sale price - purchase price - costs) * units
+        const netMargin = (salePrice - purchasePrice - (totalCosts / units)) * units;
+        monthlyMargins[month].net_margin += netMargin;
+      });
+    }
+
+    // Convert to array format
+    const result = Object.entries(monthlyMargins).map(([month, margins]) => ({
+      month,
+      gross_margin: parseFloat(margins.gross_margin.toFixed(2)),
+      net_margin: parseFloat(margins.net_margin.toFixed(2))
+    })).sort((a, b) => a.month.localeCompare(b.month));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`API running on http://localhost:${PORT}`);
 });

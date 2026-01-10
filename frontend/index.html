@@ -24,6 +24,9 @@
                 </button>
                 <nav class="space-y-2">
                     <button data-nav="dashboard" class="nav-link w-full text-left px-4 py-3 text-sm font-medium bg-indigo-50 text-indigo-700 rounded-md transition-colors">
+                        Dashboard
+                    </button>
+                    <button data-nav="opportunities" class="nav-link w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors">
                         Oportunidades
                     </button>
                     <button data-nav="stock" class="nav-link w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors">
@@ -37,7 +40,7 @@
         </aside>
 
         <main class="flex-1 overflow-auto p-6">
-        <div data-view="dashboard" class="active w-full h-full">
+        <div data-view="opportunities" class="w-full h-full">
             <div class="w-full h-full">
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-4">
@@ -45,70 +48,6 @@
                         <button onclick="app.showView('new')" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
                             + Nueva Oportunidad
                         </button>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                        <div class="bg-white overflow-hidden shadow rounded-lg">
-                            <div class="p-5">
-                                <div class="flex items-center">
-                                    <div class="flex-shrink-0">
-                                        <div class="text-2xl font-semibold text-gray-900" id="total-opportunities">0</div>
-                                        <div class="text-sm text-gray-500">Total Oportunidades</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-white overflow-hidden shadow rounded-lg">
-                            <div class="p-5">
-                                <div class="flex items-center">
-                                    <div class="flex-shrink-0">
-                                        <div class="text-2xl font-semibold text-green-600" id="capital-inmovilizado">€0</div>
-                                        <div class="text-sm text-gray-500">Capital Inmovilizado</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-white overflow-hidden shadow rounded-lg">
-                            <div class="p-5">
-                                <div class="flex items-center">
-                                    <div class="flex-shrink-0">
-                                        <div class="text-2xl font-semibold text-blue-600" id="total-margen-potencial">€0</div>
-                                        <div class="text-sm text-gray-500">Margen Potencial (Estimado)</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-white overflow-hidden shadow rounded-lg">
-                            <div class="p-5">
-                                <div class="flex items-center">
-                                    <div class="flex-shrink-0">
-                                        <div class="text-2xl font-semibold text-purple-600" id="avg-rentabilidad">0%</div>
-                                        <div class="text-sm text-gray-500">Rentabilidad Media (Estimada)</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" id="dashboard-real-metrics" style="display: none;">
-                        <div class="bg-green-50 border border-green-200 overflow-hidden shadow rounded-lg">
-                            <div class="p-5">
-                                <div class="flex items-center">
-                                    <div class="flex-shrink-0">
-                                        <div class="text-2xl font-semibold text-green-700" id="total-margen-real">€0</div>
-                                        <div class="text-sm text-green-600">Margen Real Total</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-green-50 border border-green-200 overflow-hidden shadow rounded-lg">
-                            <div class="p-5">
-                                <div class="flex items-center">
-                                    <div class="flex-shrink-0">
-                                        <div class="text-2xl font-semibold text-green-700" id="avg-rentabilidad-real">0%</div>
-                                        <div class="text-sm text-green-600">Rentabilidad Media Real</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -146,6 +85,68 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div data-view="dashboard" class="active w-full h-full">
+            <div class="space-y-6">
+                <h2 class="text-2xl font-bold text-gray-900">Dashboard de Negocio</h2>
+                
+                <!-- Immobilized Capital KPI -->
+                <div class="bg-white shadow rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Capital Inmovilizado</h3>
+                    <div class="text-4xl font-semibold text-indigo-600" id="dashboard-immobilized-capital">€0.00</div>
+                    <p class="text-sm text-gray-500 mt-2">Valor total del stock actual (unidades restantes × precio de compra)</p>
+                </div>
+
+                <!-- Sales Over Time Chart -->
+                <div class="bg-white shadow rounded-lg p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">Ventas en el Tiempo</h3>
+                        <div class="flex gap-2">
+                            <select id="sales-grouping" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <option value="day">Por Día</option>
+                                <option value="week">Por Semana</option>
+                                <option value="month" selected>Por Mes</option>
+                            </select>
+                            <select id="sales-date-range" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <option value="last-6-months" selected>Últimos 6 meses</option>
+                                <option value="last-12-months">Últimos 12 meses</option>
+                                <option value="custom">Rango personalizado</option>
+                            </select>
+                            <div id="sales-custom-range" class="hidden flex gap-2">
+                                <input type="date" id="sales-start-date" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <input type="date" id="sales-end-date" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <button onclick="app.loadSalesChart()" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">Aplicar</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="sales-chart-container" class="h-64 flex items-center justify-center text-gray-500">
+                        Cargando datos...
+                    </div>
+                </div>
+
+                <!-- Margins Chart -->
+                <div class="bg-white shadow rounded-lg p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">Márgenes</h3>
+                        <select id="margins-date-range" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <option value="last-6-months" selected>Últimos 6 meses</option>
+                            <option value="last-12-months">Últimos 12 meses</option>
+                            <option value="custom">Rango personalizado</option>
+                        </select>
+                    </div>
+                    <div class="hidden" id="margins-custom-range">
+                        <div class="flex gap-2 mb-4">
+                            <input type="date" id="margins-start-date" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <input type="date" id="margins-end-date" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <button onclick="app.loadMarginsChart()" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">Aplicar</button>
+                        </div>
+                    </div>
+                    <div id="margins-chart-container" class="h-64 flex items-center justify-center text-gray-500">
+                        Cargando datos...
                     </div>
                 </div>
             </div>

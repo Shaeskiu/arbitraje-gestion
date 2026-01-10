@@ -85,13 +85,53 @@ const app = {
     },
     
     setupFilters() {
-        document.getElementById('filter-status').addEventListener('change', (e) => {
-            this.refreshDashboard();
-        });
+        const filterStatus = document.getElementById('filter-status');
+        if (filterStatus) {
+            filterStatus.addEventListener('change', (e) => {
+                this.refreshDashboard();
+            });
+        }
         
-        document.getElementById('search-input').addEventListener('input', (e) => {
-            this.refreshDashboard();
-        });
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.refreshDashboard();
+            });
+        }
+        
+        // Dashboard filters
+        const salesGrouping = document.getElementById('sales-grouping');
+        if (salesGrouping) {
+            salesGrouping.addEventListener('change', () => {
+                this.loadSalesChart();
+            });
+        }
+        
+        const salesDateRange = document.getElementById('sales-date-range');
+        if (salesDateRange) {
+            salesDateRange.addEventListener('change', (e) => {
+                const customRange = document.getElementById('sales-custom-range');
+                if (customRange) {
+                    customRange.classList.toggle('hidden', e.target.value !== 'custom');
+                }
+                if (e.target.value !== 'custom') {
+                    this.loadSalesChart();
+                }
+            });
+        }
+        
+        const marginsDateRange = document.getElementById('margins-date-range');
+        if (marginsDateRange) {
+            marginsDateRange.addEventListener('change', (e) => {
+                const customRange = document.getElementById('margins-custom-range');
+                if (customRange) {
+                    customRange.classList.toggle('hidden', e.target.value !== 'custom');
+                }
+                if (e.target.value !== 'custom') {
+                    this.loadMarginsChart();
+                }
+            });
+        }
     },
     
     showView(viewName) {
@@ -116,6 +156,8 @@ const app = {
         }
         
         if (viewName === 'dashboard') {
+            this.refreshBusinessDashboard();
+        } else if (viewName === 'opportunities') {
             this.refreshDashboard();
         } else if (viewName === 'channels') {
             this.refreshChannels();
@@ -379,12 +421,193 @@ const app = {
             const filterStatus = document.getElementById('filter-status').value;
             const searchTerm = document.getElementById('search-input').value;
             
-            ui.updateDashboardStats(opportunities);
             ui.renderDashboard(opportunities, filterStatus, searchTerm);
         } catch (error) {
             console.error('Error refreshing dashboard:', error);
             alert('Error al cargar las oportunidades. Por favor, recarga la página.');
         }
+    },
+    
+    async refreshBusinessDashboard() {
+        try {
+            await Promise.all([
+                this.loadImmobilizedCapital(),
+                this.loadSalesChart(),
+                this.loadMarginsChart()
+            ]);
+        } catch (error) {
+            console.error('Error refreshing business dashboard:', error);
+            alert('Error al cargar el dashboard. Por favor, recarga la página.');
+        }
+    },
+    
+    async loadImmobilizedCapital() {
+        try {
+            const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/dashboard/immobilized-capital`);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            const element = document.getElementById('dashboard-immobilized-capital');
+            if (element) {
+                element.textContent = `€${parseFloat(data.value || 0).toFixed(2)}`;
+            }
+        } catch (error) {
+            console.error('Error loading immobilized capital:', error);
+            const element = document.getElementById('dashboard-immobilized-capital');
+            if (element) {
+                element.textContent = '€0.00';
+            }
+        }
+    },
+    
+    async loadSalesChart() {
+        try {
+            const grouping = document.getElementById('sales-grouping')?.value || 'month';
+            const dateRange = document.getElementById('sales-date-range')?.value || 'last-6-months';
+            let url = `${window.APP_CONFIG.API_BASE_URL}/dashboard/sales-over-time?grouping=${grouping}&range=${dateRange}`;
+            
+            if (dateRange === 'custom') {
+                const startDate = document.getElementById('sales-start-date')?.value;
+                const endDate = document.getElementById('sales-end-date')?.value;
+                if (startDate && endDate) {
+                    url += `&start_date=${startDate}&end_date=${endDate}`;
+                }
+            }
+            
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            
+            this.renderSalesChart(data);
+        } catch (error) {
+            console.error('Error loading sales chart:', error);
+            const container = document.getElementById('sales-chart-container');
+            if (container) {
+                container.innerHTML = '<p class="text-red-500">Error al cargar los datos de ventas</p>';
+            }
+        }
+    },
+    
+    async loadMarginsChart() {
+        try {
+            const dateRange = document.getElementById('margins-date-range')?.value || 'last-6-months';
+            let url = `${window.APP_CONFIG.API_BASE_URL}/dashboard/margins?range=${dateRange}`;
+            
+            if (dateRange === 'custom') {
+                const startDate = document.getElementById('margins-start-date')?.value;
+                const endDate = document.getElementById('margins-end-date')?.value;
+                if (startDate && endDate) {
+                    url += `&start_date=${startDate}&end_date=${endDate}`;
+                }
+            }
+            
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            
+            this.renderMarginsChart(data);
+        } catch (error) {
+            console.error('Error loading margins chart:', error);
+            const container = document.getElementById('margins-chart-container');
+            if (container) {
+                container.innerHTML = '<p class="text-red-500">Error al cargar los datos de márgenes</p>';
+            }
+        }
+    },
+    
+    renderSalesChart(data) {
+        const container = document.getElementById('sales-chart-container');
+        if (!container) return;
+        
+        if (!data || !data.length) {
+            container.innerHTML = '<p class="text-gray-500">No hay datos de ventas disponibles</p>';
+            return;
+        }
+        
+        // Simple table-based visualization
+        const maxValue = Math.max(...data.map(d => d.amount || 0));
+        const rows = data.map(item => {
+            const barWidth = maxValue > 0 ? (item.amount / maxValue) * 100 : 0;
+            return `
+                <tr class="border-b">
+                    <td class="px-4 py-2 text-sm text-gray-700">${item.period || 'N/A'}</td>
+                    <td class="px-4 py-2">
+                        <div class="w-full bg-gray-200 rounded-full h-6">
+                            <div class="bg-indigo-600 h-6 rounded-full" style="width: ${barWidth}%"></div>
+                        </div>
+                    </td>
+                    <td class="px-4 py-2 text-sm font-medium text-gray-900 text-right">€${parseFloat(item.amount || 0).toFixed(2)}</td>
+                </tr>
+            `;
+        }).join('');
+        
+        container.innerHTML = `
+            <div class="w-full overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Período</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ventas</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    },
+    
+    renderMarginsChart(data) {
+        const container = document.getElementById('margins-chart-container');
+        if (!container) return;
+        
+        if (!data || !data.length) {
+            container.innerHTML = '<p class="text-gray-500">No hay datos de márgenes disponibles</p>';
+            return;
+        }
+        
+        const maxValue = Math.max(...data.map(d => Math.max(d.gross_margin || 0, d.net_margin || 0)));
+        const rows = data.map(item => {
+            const grossWidth = maxValue > 0 ? (Math.abs(item.gross_margin || 0) / maxValue) * 100 : 0;
+            const netWidth = maxValue > 0 ? (Math.abs(item.net_margin || 0) / maxValue) * 100 : 0;
+            const grossColor = (item.gross_margin || 0) >= 0 ? 'bg-green-600' : 'bg-red-600';
+            const netColor = (item.net_margin || 0) >= 0 ? 'bg-blue-600' : 'bg-red-600';
+            
+            return `
+                <tr class="border-b">
+                    <td class="px-4 py-2 text-sm text-gray-700">${item.month || 'N/A'}</td>
+                    <td class="px-4 py-2">
+                        <div class="mb-1">
+                            <div class="text-xs text-gray-600 mb-1">Margen Bruto</div>
+                            <div class="w-full bg-gray-200 rounded-full h-4">
+                                <div class="${grossColor} h-4 rounded-full" style="width: ${grossWidth}%"></div>
+                            </div>
+                            <div class="text-xs font-medium ${(item.gross_margin || 0) >= 0 ? 'text-green-700' : 'text-red-700'} mt-1">€${parseFloat(item.gross_margin || 0).toFixed(2)}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-600 mb-1">Margen Neto</div>
+                            <div class="w-full bg-gray-200 rounded-full h-4">
+                                <div class="${netColor} h-4 rounded-full" style="width: ${netWidth}%"></div>
+                            </div>
+                            <div class="text-xs font-medium ${(item.net_margin || 0) >= 0 ? 'text-blue-700' : 'text-red-700'} mt-1">€${parseFloat(item.net_margin || 0).toFixed(2)}</div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        
+        container.innerHTML = `
+            <div class="w-full overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Mes</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Márgenes</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
     },
     
     async saveOpportunity() {
@@ -426,7 +649,7 @@ const app = {
                 await storage.add(opportunity);
             }
             
-            this.showView('dashboard');
+            this.showView('opportunities');
             this.refreshDashboard();
         } catch (error) {
             console.error('Error saving opportunity:', error);
@@ -661,7 +884,8 @@ const app = {
             };
             
             await storage.update(this.currentOpportunityId, updates);
-            this.showView('dashboard');
+            this.showView('opportunities');
+            this.refreshDashboard();
         } catch (error) {
             console.error('Error saving detail:', error);
             alert('Error al guardar los cambios. Por favor, inténtalo de nuevo.');
@@ -675,7 +899,8 @@ const app = {
             try {
                 const success = await storage.delete(this.currentOpportunityId);
                 if (success) {
-                    this.showView('dashboard');
+                    this.showView('opportunities');
+                    this.refreshDashboard();
                 } else {
                     alert('Error al eliminar la oportunidad.');
                 }

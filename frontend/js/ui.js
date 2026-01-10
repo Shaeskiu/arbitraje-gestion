@@ -83,29 +83,6 @@ const ui = {
         });
     },
     
-    updateDashboardStats(opportunities) {
-        document.getElementById('total-opportunities').textContent = opportunities.length;
-        document.getElementById('capital-inmovilizado').textContent = 
-            arbitrage.formatCurrency(arbitrage.getCapitalInmovilizado(opportunities));
-        document.getElementById('total-margen-potencial').textContent = 
-            arbitrage.formatCurrency(arbitrage.getTotalMargenPotencial(opportunities));
-        document.getElementById('avg-rentabilidad').textContent = 
-            arbitrage.formatPercent(arbitrage.getAverageRentabilidad(opportunities));
-        
-        const totalMargenReal = arbitrage.getTotalMargenReal(opportunities);
-        const avgRentabilidadReal = arbitrage.getAverageRentabilidadReal(opportunities);
-        const realMetricsSection = document.getElementById('dashboard-real-metrics');
-        
-        if (avgRentabilidadReal !== null) {
-            realMetricsSection.style.display = 'grid';
-            document.getElementById('total-margen-real').textContent = 
-                arbitrage.formatCurrency(totalMargenReal);
-            document.getElementById('avg-rentabilidad-real').textContent = 
-                arbitrage.formatPercent(avgRentabilidadReal);
-        } else {
-            realMetricsSection.style.display = 'none';
-        }
-    },
     
     renderForm(opportunity = null) {
         const form = document.getElementById('opportunity-form');
