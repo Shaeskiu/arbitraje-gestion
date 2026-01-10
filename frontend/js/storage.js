@@ -187,7 +187,7 @@ const storage = {
 };
 
 const channelStorage = {
-    apiBaseUrl: 'http://localhost:3001',
+    apiBaseUrl: 'https://arbitraje-gestion-production.up.railway.app',
     
     async getAll() {
         try {
