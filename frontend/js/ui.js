@@ -1,8 +1,11 @@
 const ui = {
-    renderDashboard(opportunities, filterStatus = '', searchTerm = '') {
-        let filtered = opportunities;
+    renderOpportunities(opportunities, filterStatus = '', searchTerm = '') {
+        // Filtrar oportunidades convertidas por defecto (solo mostrar si el filtro lo solicita explícitamente)
+        let filtered = filterStatus === 'convertida' 
+            ? opportunities 
+            : opportunities.filter(o => o.status !== 'convertida');
         
-        if (filterStatus) {
+        if (filterStatus && filterStatus !== 'convertida') {
             filtered = filtered.filter(o => o.status === filterStatus);
         }
         
@@ -10,12 +13,17 @@ const ui = {
             const term = searchTerm.toLowerCase();
             filtered = filtered.filter(o => 
                 o.productName.toLowerCase().includes(term) ||
-                o.originChannel.toLowerCase().includes(term) ||
-                o.destChannel.toLowerCase().includes(term)
+                (o.originChannel && o.originChannel.toLowerCase().includes(term)) ||
+                (o.destChannel && o.destChannel.toLowerCase().includes(term))
             );
         }
         
         const tbody = document.getElementById('opportunities-table');
+        if (!tbody) {
+            console.error('Opportunities table body not found');
+            return;
+        }
+        
         tbody.innerHTML = '';
         
         if (filtered.length === 0) {
@@ -24,24 +32,48 @@ const ui = {
         }
         
         filtered.forEach(opportunity => {
-            const calc = arbitrage.calculate(opportunity);
+            const precioCompra = opportunity.precioEstimadoCompra !== undefined && opportunity.precioEstimadoCompra !== null
+                ? parseFloat(opportunity.precioEstimadoCompra)
+                : (opportunity.originPrice !== undefined ? parseFloat(opportunity.originPrice) : 0);
+            
+            const precioVenta = opportunity.precioEstimadoVenta !== undefined && opportunity.precioEstimadoVenta !== null
+                ? parseFloat(opportunity.precioEstimadoVenta)
+                : (opportunity.destPrice !== undefined ? parseFloat(opportunity.destPrice) : 0);
+            
+            const margenEstimado = opportunity.margenEstimado !== undefined && opportunity.margenEstimado !== null
+                ? parseFloat(opportunity.margenEstimado)
+                : (precioVenta - precioCompra);
+            
+            const rentabilidadEstimada = precioCompra > 0 ? (margenEstimado / precioCompra) * 100 : 0;
+            
             const row = document.createElement('tr');
             row.className = 'hover:bg-gray-50';
             
-            const realSalePriceHtml = opportunity.realSalePrice 
-                ? `<div class="text-sm text-green-600">Venta Real: ${arbitrage.formatCurrency(opportunity.realSalePrice)}</div>` 
-                : '';
-            
-            const marginHtml = calc.real 
-                ? `${arbitrage.formatCurrency(calc.estimated.netMargin)} <span class="text-xs text-gray-500">(${arbitrage.formatCurrency(calc.real.netMargin)} real)</span>`
-                : arbitrage.formatCurrency(calc.estimated.netMargin);
-            
-            const profitabilityHtml = calc.real
-                ? `${arbitrage.formatPercent(calc.estimated.profitability)} <span class="text-xs text-gray-500">(${arbitrage.formatPercent(calc.real.profitability)} real)</span>`
-                : arbitrage.formatPercent(calc.estimated.profitability);
-            
             const originChannelName = opportunity.originChannel || 'N/A';
             const destChannelName = opportunity.destChannel || 'N/A';
+            
+            const statusColors = {
+                'detectada': 'bg-blue-100 text-blue-800',
+                'descartada': 'bg-red-100 text-red-800',
+                'convertida': 'bg-green-100 text-green-800'
+            };
+            
+            const statusLabels = {
+                'detectada': 'Detectada',
+                'descartada': 'Descartada',
+                'convertida': 'Convertida'
+            };
+            
+            const statusClass = statusColors[opportunity.status] || 'bg-gray-100 text-gray-800';
+            const statusLabel = statusLabels[opportunity.status] || this.capitalize(opportunity.status || '');
+            
+            const buttonHtml = opportunity.status === 'convertida' 
+                ? '<span class="text-gray-400 text-sm">Convertida</span>'
+                : `<button onclick="app.openCompraModal('${opportunity.id}', '${opportunity.canalOrigenId || opportunity.originChannelId || ''}', ${precioCompra}, '${this.escapeHtml(opportunity.productName)}')" class="text-green-600 hover:text-green-900" title="Comprar">
+                    <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                </button>`;
             
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap">
@@ -52,35 +84,38 @@ const ui = {
                     <div class="text-sm text-gray-500">→ ${this.escapeHtml(destChannelName)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">Compra: ${arbitrage.formatCurrency(opportunity.originPrice)}</div>
-                    <div class="text-sm text-gray-500">Venta Est: ${arbitrage.formatCurrency(opportunity.destPrice)}</div>
-                    ${realSalePriceHtml}
+                    <div class="text-sm text-gray-900">Compra Est: ${this.formatCurrency(precioCompra)}</div>
+                    <div class="text-sm text-gray-500">Venta Est: ${this.formatCurrency(precioVenta)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${marginHtml}</div>
+                    <div class="text-sm text-gray-900">${this.formatCurrency(margenEstimado)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm ${calc.estimated.profitability >= 0 ? 'text-green-600' : 'text-red-600'}">
-                        ${profitabilityHtml}
+                    <div class="text-sm ${rentabilidadEstimada >= 0 ? 'text-green-600' : 'text-red-600'}">
+                        ${this.formatPercent(rentabilidadEstimada)}
                     </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${arbitrage.getStatusColor(opportunity.status)}">
-                        ${this.capitalize(opportunity.status)}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                        ${statusLabel}
                     </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button onclick="app.showDetail('${opportunity.id}')" class="text-indigo-600 hover:text-indigo-900">Ver</button>
-                    <button onclick="app.openConversionModal('${opportunity.id}', ${opportunity.originPrice})" class="text-green-600 hover:text-green-900" title="Convertir a Stock">
-                        <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                        </svg>
-                    </button>
+                    ${buttonHtml}
                 </td>
             `;
             
             tbody.appendChild(row);
         });
+    },
+    
+    formatCurrency(value) {
+        return '€' + parseFloat(value || 0).toFixed(2);
+    },
+    
+    formatPercent(value) {
+        return parseFloat(value || 0).toFixed(2) + '%';
     },
     
     
@@ -123,7 +158,7 @@ const ui = {
             if (originPriceInput) originPriceInput.value = opportunity.originPrice || '';
             if (destPriceInput) destPriceInput.value = opportunity.destPrice || '';
             if (realSalePriceInput) realSalePriceInput.value = opportunity.realSalePrice || '';
-            if (statusSelect) statusSelect.value = opportunity.status || 'detectado';
+            if (statusSelect) statusSelect.value = opportunity.status || 'detectada';
             if (notesTextarea) notesTextarea.value = opportunity.notes || '';
             
             app.formCosts = opportunity.costs ? JSON.parse(JSON.stringify(opportunity.costs)) : [];
@@ -184,7 +219,7 @@ const ui = {
             const destChannelIdInput = document.getElementById('dest-channel-id');
             
             if (opportunityIdInput) opportunityIdInput.value = '';
-            if (statusSelect) statusSelect.value = 'detectado';
+            if (statusSelect) statusSelect.value = 'detectada';
             if (realSalePriceInput) realSalePriceInput.value = '';
             if (originChannelSelect) originChannelSelect.value = '';
             if (destChannelSelect) destChannelSelect.value = '';
@@ -648,7 +683,7 @@ const ui = {
         tbody.innerHTML = '';
         
         if (!stockItems || stockItems.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">No hay stock</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">No hay stock disponible</td></tr>';
             return;
         }
         
@@ -656,54 +691,114 @@ const ui = {
             const row = document.createElement('tr');
             row.className = 'hover:bg-gray-50';
             
-            const totalValue = stock.realPurchasePrice * stock.unitsPurchased;
-            const formattedDate = stock.purchaseDate ? new Date(stock.purchaseDate).toLocaleDateString('es-ES') : 'N/A';
-            
-            const statusColors = {
-                'in_stock': 'bg-blue-100 text-blue-800',
-                'sold': 'bg-green-100 text-green-800',
-                'returned': 'bg-red-100 text-red-800'
-            };
-            
-            const statusLabels = {
-                'in_stock': 'En Stock',
-                'sold': 'Vendido',
-                'returned': 'Devuelto'
-            };
-            
-            const statusClass = statusColors[stock.stockStatus] || 'bg-gray-100 text-gray-800';
-            const statusLabel = statusLabels[stock.stockStatus] || stock.stockStatus;
+            const valorTotal = stock.unidadesDisponibles * stock.costeUnitarioReal;
+            const formattedDate = stock.fechaCompra ? new Date(stock.fechaCompra).toLocaleDateString('es-ES') : 'N/A';
             
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900">${this.escapeHtml(stock.productName)}</div>
+                    <div class="text-sm font-medium text-gray-900">${this.escapeHtml(stock.productoName || 'N/A')}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${this.escapeHtml(stock.purchaseChannel || 'N/A')}</div>
+                    <div class="text-sm text-gray-900">${this.escapeHtml(stock.canalOrigenName || 'N/A')}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">€${parseFloat(stock.realPurchasePrice).toFixed(2)}</div>
+                    <div class="text-sm text-gray-900">€${parseFloat(stock.costeUnitarioReal || 0).toFixed(2)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${stock.unitsPurchased}</div>
+                    <div class="text-sm text-gray-900">
+                        <span class="font-medium">${stock.unidadesDisponibles}</span>
+                        <span class="text-gray-400"> / ${stock.unidadesIniciales}</span>
+                    </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900">€${totalValue.toFixed(2)}</div>
+                    <div class="text-sm font-medium text-indigo-600">€${valorTotal.toFixed(2)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm text-gray-500">${formattedDate}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
-                        ${statusLabel}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${stock.unidadesDisponibles > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                        ${stock.unidadesDisponibles > 0 ? 'Disponible' : 'Agotado'}
                     </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button onclick="app.deleteStock('${stock.id}')" class="text-red-600 hover:text-red-900">Eliminar</button>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    ${stock.unidadesDisponibles > 0 ? `<button onclick="app.openVentaModal('${stock.id}', ${stock.unidadesDisponibles})" class="text-green-600 hover:text-green-900" title="Registrar Venta">Vender</button>` : ''}
                 </td>
             `;
             
             tbody.appendChild(row);
         });
+    },
+    
+    updateImmobilizedCapital(value) {
+        const element = document.getElementById('immobilized-capital-value');
+        if (element) {
+            element.textContent = this.formatCurrency(value);
+        }
+    },
+    
+    renderSalesChart(salesData, grouping = 'day') {
+        const container = document.getElementById('sales-chart-container');
+        if (!container) {
+            console.error('Sales chart container not found');
+            return;
+        }
+        
+        if (!salesData || salesData.length === 0) {
+            container.innerHTML = '<div class="text-center text-gray-500">No hay datos de ventas disponibles</div>';
+            return;
+        }
+        
+        // Por ahora renderizamos como tabla, después se puede mejorar con un gráfico
+        let html = '<table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr>';
+        html += '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>';
+        html += '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Ventas</th>';
+        html += '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Unidades</th>';
+        html += '</tr></thead><tbody class="bg-white divide-y divide-gray-200">';
+        
+        salesData.forEach(item => {
+            html += '<tr class="hover:bg-gray-50">';
+            html += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.escapeHtml(item.period || item.date || 'N/A')}</td>`;
+            html += `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">${this.formatCurrency(item.total_sales || item.total || 0)}</td>`;
+            html += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.total_units || item.unidades || 0}</td>`;
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    },
+    
+    renderMarginsChart(marginsData) {
+        const container = document.getElementById('margins-chart-container');
+        if (!container) {
+            console.error('Margins chart container not found');
+            return;
+        }
+        
+        if (!marginsData || marginsData.length === 0) {
+            container.innerHTML = '<div class="text-center text-gray-500">No hay datos de márgenes disponibles</div>';
+            return;
+        }
+        
+        // Por ahora renderizamos como tabla
+        let html = '<table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr>';
+        html += '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mes</th>';
+        html += '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Margen Bruto</th>';
+        html += '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Margen Neto</th>';
+        html += '</tr></thead><tbody class="bg-white divide-y divide-gray-200">';
+        
+        marginsData.forEach(item => {
+            const grossMargin = parseFloat(item.gross_margin || item.margen_bruto || 0);
+            const netMargin = parseFloat(item.net_margin || item.margen_neto || 0);
+            
+            html += '<tr class="hover:bg-gray-50">';
+            html += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.escapeHtml(item.month || item.mes || 'N/A')}</td>`;
+            html += `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${grossMargin >= 0 ? 'text-green-600' : 'text-red-600'}">${this.formatCurrency(grossMargin)}</td>`;
+            html += `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${netMargin >= 0 ? 'text-green-600' : 'text-red-600'}">${this.formatCurrency(netMargin)}</td>`;
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table>';
+        container.innerHTML = html;
     }
 };

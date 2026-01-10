@@ -142,14 +142,26 @@ const arbitrage = {
     },
     
     getStatusColor(status) {
+        const statusLower = status ? String(status).toLowerCase() : '';
         const colors = {
-            detectado: 'bg-gray-100 text-gray-800',
+            // Nuevos valores permitidos
+            detectada: 'bg-blue-100 text-blue-800',
+            descartada: 'bg-red-100 text-red-800',
+            convertida: 'bg-green-100 text-green-800',
+            // Valores antiguos (por compatibilidad)
+            detectado: 'bg-blue-100 text-blue-800',
             analizado: 'bg-blue-100 text-blue-800',
+            analizada: 'bg-blue-100 text-blue-800',
             aprobado: 'bg-yellow-100 text-yellow-800',
+            aprobada: 'bg-yellow-100 text-yellow-800',
             comprado: 'bg-purple-100 text-purple-800',
+            comprada: 'bg-purple-100 text-purple-800',
             vendido: 'bg-green-100 text-green-800',
-            descartado: 'bg-red-100 text-red-800'
+            vendida: 'bg-green-100 text-green-800',
+            descartado: 'bg-red-100 text-red-800',
+            convertido: 'bg-green-100 text-green-800',
+            converted: 'bg-green-100 text-green-800'
         };
-        return colors[status] || 'bg-gray-100 text-gray-800';
+        return colors[statusLower] || 'bg-gray-100 text-gray-800';
     }
 };

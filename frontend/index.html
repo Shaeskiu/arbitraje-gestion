@@ -58,12 +58,9 @@
                             <div class="flex gap-2">
                                 <select id="filter-status" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                                     <option value="">Todos los estados</option>
-                                    <option value="detectado">Detectado</option>
-                                    <option value="analizado">Analizado</option>
-                                    <option value="aprobado">Aprobado</option>
-                                    <option value="comprado">Comprado</option>
-                                    <option value="vendido">Vendido</option>
-                                    <option value="descartado">Descartado</option>
+                                    <option value="detectada">Detectada</option>
+                                    <option value="descartada">Descartada</option>
+                                    <option value="convertida">Convertida</option>
                                 </select>
                                 <input type="text" id="search-input" placeholder="Buscar..." class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                             </div>
@@ -221,12 +218,9 @@
                         <div>
                             <label for="status" class="block text-sm font-medium text-gray-700">Estado</label>
                             <select id="status" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                <option value="detectado">Detectado</option>
-                                <option value="analizado">Analizado</option>
-                                <option value="aprobado">Aprobado</option>
-                                <option value="comprado">Comprado</option>
-                                <option value="vendido">Vendido</option>
-                                <option value="descartado">Descartado</option>
+                                <option value="detectada">Detectada</option>
+                                <option value="descartada">Descartada</option>
+                                <option value="convertida">Convertida</option>
                             </select>
                         </div>
 
@@ -367,12 +361,9 @@
                     <div class="mb-6">
                         <label for="detail-status" class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
                         <select id="detail-status" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                            <option value="detectado">Detectado</option>
-                            <option value="analizado">Analizado</option>
-                            <option value="aprobado">Aprobado</option>
-                            <option value="comprado">Comprado</option>
-                            <option value="vendido">Vendido</option>
-                            <option value="descartado">Descartado</option>
+                            <option value="detectada">Detectada</option>
+                            <option value="descartada">Descartada</option>
+                            <option value="convertida">Convertida</option>
                         </select>
                     </div>
 
@@ -454,16 +445,16 @@
         <div data-view="stock" class="w-full">
             <div class="bg-white shadow rounded-lg">
                 <div class="p-6">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Stock</h2>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Stock Disponible</h2>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Canal Compra</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Compra</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidades</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coste Unitario</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidades (Disponibles/Total)</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Total Inmovilizado</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Compra</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -525,34 +516,90 @@
     <!-- Configuration (must be loaded first) -->
     <script src="config.js"></script>
 
-    <!-- Conversion Modal -->
-    <div id="conversion-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center" onclick="app.closeConversionModalOnOverlay(event)">
+    <!-- Compra Modal -->
+    <div id="compra-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center" onclick="app.closeCompraModalOnOverlay(event)">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" onclick="event.stopPropagation()">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold text-gray-900">Convertir a Stock</h2>
-                    <button onclick="app.closeConversionModal()" class="text-gray-400 hover:text-gray-600">
+                    <h2 class="text-2xl font-bold text-gray-900">Registrar Compra</h2>
+                    <button onclick="app.closeCompraModal()" class="text-gray-400 hover:text-gray-600">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
                 </div>
-                <form id="conversion-form" class="space-y-4">
-                    <input type="hidden" id="conversion-opportunity-id">
+                <form id="compra-form" class="space-y-4">
+                    <input type="hidden" id="compra-opportunity-id">
+                    <input type="hidden" id="compra-canal-origen-id">
+                    <input type="hidden" id="compra-product-name">
                     <div>
-                        <label for="conversion-real-price" class="block text-sm font-medium text-gray-700 mb-1">Precio Real de Compra (€)</label>
-                        <input type="number" id="conversion-real-price" step="0.01" min="0" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <label for="compra-product-name-display" class="block text-sm font-medium text-gray-700 mb-1">Producto</label>
+                        <input type="text" id="compra-product-name-display" readonly class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 sm:text-sm">
                     </div>
                     <div>
-                        <label for="conversion-units" class="block text-sm font-medium text-gray-700 mb-1">Unidades Compradas</label>
-                        <input type="number" id="conversion-units" min="1" required value="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <label for="compra-precio-unitario" class="block text-sm font-medium text-gray-700 mb-1">Precio Unitario (€)</label>
+                        <input type="number" id="compra-precio-unitario" step="0.01" min="0" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="compra-unidades" class="block text-sm font-medium text-gray-700 mb-1">Unidades Compradas</label>
+                        <input type="number" id="compra-unidades" min="1" required value="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="compra-fecha" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Compra</label>
+                        <input type="date" id="compra-fecha" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                     </div>
                     <div class="flex justify-end space-x-3 pt-4">
-                        <button type="button" onclick="app.closeConversionModal()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        <button type="button" onclick="app.closeCompraModal()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                             Cancelar
                         </button>
                         <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                            Convertir
+                            Comprar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Venta Modal -->
+    <div id="venta-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center" onclick="app.closeVentaModalOnOverlay(event)">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" onclick="event.stopPropagation()">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-900">Registrar Venta</h2>
+                    <button onclick="app.closeVentaModal()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <form id="venta-form" class="space-y-4">
+                    <input type="hidden" id="venta-stock-id">
+                    <div>
+                        <label for="venta-canal-destino" class="block text-sm font-medium text-gray-700 mb-1">Canal de Venta</label>
+                        <select id="venta-canal-destino" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <option value="">Selecciona un canal</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="venta-precio-unitario" class="block text-sm font-medium text-gray-700 mb-1">Precio Unitario de Venta (€)</label>
+                        <input type="number" id="venta-precio-unitario" step="0.01" min="0" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="venta-unidades" class="block text-sm font-medium text-gray-700 mb-1">Unidades Vendidas</label>
+                        <input type="number" id="venta-unidades" min="1" required value="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <p class="mt-1 text-xs text-gray-500" id="venta-unidades-disponibles">Disponibles: <span id="venta-unidades-max">0</span></p>
+                    </div>
+                    <div>
+                        <label for="venta-fecha" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Venta</label>
+                        <input type="date" id="venta-fecha" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="app.closeVentaModal()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                            Vender
                         </button>
                     </div>
                 </form>

@@ -120,40 +120,77 @@ const storage = {
             dbOpp.product_name = String(opportunity.productName).trim();
         }
         
-        if (opportunity.originChannel !== undefined && opportunity.originChannel !== null) {
-            dbOpp.origin_channel = String(opportunity.originChannel).trim();
+        // Usar nuevos campos o mantener compatibilidad con antiguos
+        const precioCompra = opportunity.precioEstimadoCompra !== undefined 
+            ? opportunity.precioEstimadoCompra 
+            : (opportunity.originPrice !== undefined ? opportunity.originPrice : null);
+        
+        const precioVenta = opportunity.precioEstimadoVenta !== undefined 
+            ? opportunity.precioEstimadoVenta 
+            : (opportunity.destPrice !== undefined ? opportunity.destPrice : null);
+        
+        if (precioCompra !== undefined && precioCompra !== null) {
+            dbOpp.precio_estimado_compra = parseFloat(precioCompra);
+            dbOpp.origin_price = parseFloat(precioCompra); // Compatibilidad
         }
         
-        if (opportunity.originPrice !== undefined && opportunity.originPrice !== null) {
-            dbOpp.origin_price = parseFloat(opportunity.originPrice);
+        if (precioVenta !== undefined && precioVenta !== null) {
+            dbOpp.precio_estimado_venta = parseFloat(precioVenta);
+            dbOpp.dest_price = parseFloat(precioVenta); // Compatibilidad
+        }
+        
+        // Calcular margen estimado
+        if (precioCompra !== null && precioVenta !== null) {
+            dbOpp.margen_estimado = parseFloat(precioVenta) - parseFloat(precioCompra);
+        }
+        
+        const canalOrigenId = opportunity.canalOrigenId !== undefined 
+            ? opportunity.canalOrigenId 
+            : (opportunity.originChannelId !== undefined ? opportunity.originChannelId : null);
+        
+        const canalDestinoId = opportunity.canalDestinoId !== undefined 
+            ? opportunity.canalDestinoId 
+            : (opportunity.destChannelId !== undefined ? opportunity.destChannelId : null);
+        
+        if (canalOrigenId !== undefined && canalOrigenId !== null) {
+            dbOpp.canal_origen_id = canalOrigenId;
+            dbOpp.origin_channel_id = canalOrigenId; // Compatibilidad
+        }
+        
+        if (canalDestinoId !== undefined && canalDestinoId !== null) {
+            dbOpp.canal_destino_id = canalDestinoId;
+            dbOpp.dest_channel_id = canalDestinoId; // Compatibilidad
+        }
+        
+        // Mantener campos antiguos para compatibilidad
+        if (opportunity.originChannel !== undefined && opportunity.originChannel !== null) {
+            dbOpp.origin_channel = String(opportunity.originChannel).trim();
         }
         
         if (opportunity.destChannel !== undefined && opportunity.destChannel !== null) {
             dbOpp.dest_channel = String(opportunity.destChannel).trim();
         }
         
-        if (opportunity.destPrice !== undefined && opportunity.destPrice !== null) {
-            dbOpp.dest_price = parseFloat(opportunity.destPrice);
-        }
-        
         if (opportunity.status !== undefined && opportunity.status !== null) {
-            dbOpp.status = String(opportunity.status);
+            // Normalizar status a los valores permitidos
+            const statusValue = String(opportunity.status).toLowerCase().trim();
+            dbOpp.status = statusValue === 'detectado' ? 'detectada'
+                : statusValue === 'descartado' ? 'descartada'
+                : statusValue === 'convertido' ? 'convertida'
+                : statusValue === 'comprado' || statusValue === 'comprada' ? 'convertida'
+                : statusValue === 'vendido' || statusValue === 'vendida' ? 'convertida'
+                : statusValue === 'analizado' || statusValue === 'analizada' ? 'detectada'
+                : statusValue === 'aprobado' || statusValue === 'aprobada' ? 'detectada'
+                : (statusValue === 'detectada' || statusValue === 'descartada' || statusValue === 'convertida')
+                    ? statusValue
+                    : 'detectada'; // Valor por defecto
+        } else {
+            // Si no viene status, usar 'detectada' por defecto
+            dbOpp.status = 'detectada';
         }
         
         if (opportunity.costs !== undefined) {
             dbOpp.costs = opportunity.costs || [];
-        }
-        
-        if (opportunity.originChannelId !== undefined && opportunity.originChannelId !== null) {
-            dbOpp.origin_channel_id = opportunity.originChannelId;
-        }
-        
-        if (opportunity.destChannelId !== undefined && opportunity.destChannelId !== null) {
-            dbOpp.dest_channel_id = opportunity.destChannelId;
-        }
-        
-        if (opportunity.realSalePrice !== undefined) {
-            dbOpp.real_sale_price = opportunity.realSalePrice !== null ? parseFloat(opportunity.realSalePrice) : null;
         }
         
         if (opportunity.notes !== undefined) {
@@ -166,16 +203,32 @@ const storage = {
     transformFromDB(dbOpportunity) {
         const costs = dbOpportunity.opportunity_costs || [];
         
+        // Usar nuevos campos si existen, sino usar los antiguos para compatibilidad
+        const precioEstimadoCompra = dbOpportunity.precio_estimado_compra !== undefined && dbOpportunity.precio_estimado_compra !== null
+            ? parseFloat(dbOpportunity.precio_estimado_compra)
+            : (dbOpportunity.origin_price ? parseFloat(dbOpportunity.origin_price) : 0);
+        
+        const precioEstimadoVenta = dbOpportunity.precio_estimado_venta !== undefined && dbOpportunity.precio_estimado_venta !== null
+            ? parseFloat(dbOpportunity.precio_estimado_venta)
+            : (dbOpportunity.dest_price ? parseFloat(dbOpportunity.dest_price) : 0);
+        
+        const canalOrigenId = dbOpportunity.canal_origen_id || dbOpportunity.origin_channel_id || null;
+        const canalDestinoId = dbOpportunity.canal_destino_id || dbOpportunity.dest_channel_id || null;
+        
         return {
             id: dbOpportunity.id,
             productName: dbOpportunity.product_name,
-            originChannel: dbOpportunity.origin_channel || (dbOpportunity.origin_channel_id ? '' : ''),
-            originChannelId: dbOpportunity.origin_channel_id || null,
-            originPrice: parseFloat(dbOpportunity.origin_price),
-            destChannel: dbOpportunity.dest_channel || (dbOpportunity.dest_channel_id ? '' : ''),
-            destChannelId: dbOpportunity.dest_channel_id || null,
-            destPrice: parseFloat(dbOpportunity.dest_price),
-            realSalePrice: dbOpportunity.real_sale_price ? parseFloat(dbOpportunity.real_sale_price) : null,
+            originChannel: dbOpportunity.origin_channel || '',
+            originChannelId: canalOrigenId,
+            originPrice: precioEstimadoCompra, // Para compatibilidad con código existente
+            canalOrigenId: canalOrigenId,
+            precioEstimadoCompra: precioEstimadoCompra,
+            destChannel: dbOpportunity.dest_channel || '',
+            destChannelId: canalDestinoId,
+            destPrice: precioEstimadoVenta, // Para compatibilidad
+            canalDestinoId: canalDestinoId,
+            precioEstimadoVenta: precioEstimadoVenta,
+            margenEstimado: dbOpportunity.margen_estimado ? parseFloat(dbOpportunity.margen_estimado) : (precioEstimadoVenta - precioEstimadoCompra),
             status: dbOpportunity.status,
             notes: dbOpportunity.notes,
             costs: costs.map(cost => ({
@@ -341,6 +394,72 @@ const channelStorage = {
     }
 };
 
+const comprasStorage = {
+    get apiBaseUrl() {
+        if (!window.APP_CONFIG || !window.APP_CONFIG.API_BASE_URL) {
+            console.error('APP_CONFIG.API_BASE_URL is not defined. Make sure config.js is loaded.');
+            throw new Error('API configuration is missing. Please ensure config.js is loaded.');
+        }
+        return window.APP_CONFIG.API_BASE_URL;
+    },
+    
+    async createFromOpportunity(opportunityId, canalOrigenId, productName, precioUnitario, unidades, costesCompra = [], fechaCompra = null) {
+        try {
+            if (!canalOrigenId || typeof canalOrigenId !== 'string') {
+                throw new Error('Valid canal origen ID is required');
+            }
+            
+            if (!productName || typeof productName !== 'string' || !productName.trim()) {
+                throw new Error('Product name is required');
+            }
+            
+            const compraData = {
+                oportunidad_id: opportunityId && opportunityId !== '' ? opportunityId : null,
+                canal_origen_id: canalOrigenId,
+                product_name: productName.trim(),
+                precio_unitario: parseFloat(precioUnitario),
+                unidades: parseInt(unidades),
+                costes_compra: costesCompra || [],
+                fecha_compra: fechaCompra || new Date().toISOString().split('T')[0]
+            };
+            
+            const response = await fetch(`${this.apiBaseUrl}/compras`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(compraData)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Error creating compra:', error);
+            throw error;
+        }
+    },
+    
+    async getAll() {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/compras`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching compras:', error);
+            return [];
+        }
+    }
+};
+
 const stockStorage = {
     get apiBaseUrl() {
         if (!window.APP_CONFIG || !window.APP_CONFIG.API_BASE_URL) {
@@ -391,21 +510,56 @@ const stockStorage = {
         }
     },
     
-    async convertFromOpportunity(opportunityId, realPurchasePrice, units) {
+    transformFromDB(dbStock) {
+        const compra = dbStock.compra || {};
+        const canal = compra.canal_origen || {};
+        return {
+            id: dbStock.id,
+            compraId: dbStock.compra_id,
+            unidadesIniciales: parseInt(dbStock.unidades_iniciales) || 0,
+            unidadesDisponibles: parseInt(dbStock.unidades_disponibles) || 0,
+            costeUnitarioReal: parseFloat(dbStock.coste_unitario_real) || 0,
+            productoName: dbStock.product_name || compra.product_name || 'N/A',
+            canalOrigenName: canal.name || 'N/A',
+            canalOrigenId: compra.canal_origen_id || null,
+            fechaCompra: compra.fecha_compra || null,
+            createdAt: dbStock.created_at,
+            updatedAt: dbStock.updated_at
+        };
+    }
+};
+
+const ventasStorage = {
+    get apiBaseUrl() {
+        if (!window.APP_CONFIG || !window.APP_CONFIG.API_BASE_URL) {
+            console.error('APP_CONFIG.API_BASE_URL is not defined. Make sure config.js is loaded.');
+            throw new Error('API configuration is missing. Please ensure config.js is loaded.');
+        }
+        return window.APP_CONFIG.API_BASE_URL;
+    },
+    
+    async create(stockId, canalDestinoId, precioUnitario, unidades, costesVenta = [], fechaVenta = null) {
         try {
-            if (!opportunityId || typeof opportunityId !== 'string') {
-                throw new Error('Valid opportunity ID is required');
+            if (!stockId || typeof stockId !== 'string') {
+                throw new Error('Valid stock ID is required');
             }
             
-            const response = await fetch(`${this.apiBaseUrl}/stock/from-opportunity`, {
+            if (!canalDestinoId || typeof canalDestinoId !== 'string') {
+                throw new Error('Valid canal destino ID is required');
+            }
+            
+            const response = await fetch(`${this.apiBaseUrl}/ventas`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    opportunity_id: opportunityId,
-                    real_purchase_price: parseFloat(realPurchasePrice),
-                    units: parseInt(units)
+                    stock_id: stockId,
+                    canal_destino_id: canalDestinoId,
+                    precio_unitario: parseFloat(precioUnitario),
+                    unidades: parseInt(unidades),
+                    costes_venta: costesVenta,
+                    fecha_venta: fechaVenta || new Date().toISOString().split('T')[0]
                 })
             });
             
@@ -414,97 +568,93 @@ const stockStorage = {
                 throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
             }
             
-            const stockItem = await response.json();
-            
-            return this.transformFromDB(stockItem);
+            const venta = await response.json();
+            return venta;
         } catch (error) {
-            console.error('Error converting opportunity to stock:', error);
+            console.error('Error creating venta:', error);
             throw error;
         }
     },
     
-    async update(id, updates) {
+    async getAll() {
         try {
-            if (!id || typeof id !== 'string') {
-                throw new Error('Valid ID is required');
-            }
-            
-            const dbUpdates = this.transformToDB(updates);
-            
-            const response = await fetch(`${this.apiBaseUrl}/stock/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(dbUpdates)
-            });
+            const response = await fetch(`${this.apiBaseUrl}/ventas`);
             
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-                throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
             
-            const updatedStock = await response.json();
-            
-            return this.transformFromDB(updatedStock);
+            return await response.json();
         } catch (error) {
-            console.error('Error updating stock:', error);
-            throw error;
+            console.error('Error fetching ventas:', error);
+            return [];
         }
+    }
+};
+
+const dashboardStorage = {
+    get apiBaseUrl() {
+        if (!window.APP_CONFIG || !window.APP_CONFIG.API_BASE_URL) {
+            console.error('APP_CONFIG.API_BASE_URL is not defined. Make sure config.js is loaded.');
+            throw new Error('API configuration is missing. Please ensure config.js is loaded.');
+        }
+        return window.APP_CONFIG.API_BASE_URL;
     },
     
-    async delete(id) {
+    async getImmobilizedCapital() {
         try {
-            if (!id || typeof id !== 'string') {
-                throw new Error('Valid ID is required');
-            }
-            
-            const response = await fetch(`${this.apiBaseUrl}/stock/${id}`, {
-                method: 'DELETE'
-            });
+            const response = await fetch(`${this.apiBaseUrl}/dashboard/immobilized-capital`);
             
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-                throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
             
-            return true;
+            const data = await response.json();
+            return parseFloat(data.value || 0);
         } catch (error) {
-            console.error('Error deleting stock:', error);
-            throw error;
+            console.error('Error fetching immobilized capital:', error);
+            return 0;
         }
     },
     
-    transformToDB(stock) {
-        const dbStock = {};
-        
-        if (stock.productName !== undefined) dbStock.product_name = String(stock.productName).trim();
-        if (stock.purchaseChannel !== undefined) dbStock.purchase_channel = String(stock.purchaseChannel).trim();
-        if (stock.purchaseChannelId !== undefined) dbStock.purchase_channel_id = stock.purchaseChannelId || null;
-        if (stock.realPurchasePrice !== undefined) dbStock.real_purchase_price = parseFloat(stock.realPurchasePrice) || 0;
-        if (stock.unitsPurchased !== undefined) dbStock.units_purchased = parseInt(stock.unitsPurchased) || 1;
-        if (stock.purchaseDate !== undefined) dbStock.purchase_date = String(stock.purchaseDate);
-        if (stock.stockStatus !== undefined) dbStock.stock_status = String(stock.stockStatus);
-        if (stock.notes !== undefined) dbStock.notes = stock.notes ? String(stock.notes).trim() : null;
-        
-        return dbStock;
+    async getSalesOverTime(grouping = 'day', startDate = null, endDate = null) {
+        try {
+            let url = `${this.apiBaseUrl}/dashboard/sales-over-time?grouping=${grouping}`;
+            if (startDate) url += `&start_date=${startDate}`;
+            if (endDate) url += `&end_date=${endDate}`;
+            
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching sales over time:', error);
+            return [];
+        }
     },
     
-    transformFromDB(dbStock) {
-        return {
-            id: dbStock.id,
-            opportunityId: dbStock.opportunity_id,
-            productName: dbStock.product_name,
-            purchaseChannel: dbStock.purchase_channel,
-            purchaseChannelId: dbStock.purchase_channel_id,
-            realPurchasePrice: parseFloat(dbStock.real_purchase_price),
-            unitsPurchased: parseInt(dbStock.units_purchased),
-            purchaseDate: dbStock.purchase_date,
-            stockStatus: dbStock.stock_status,
-            notes: dbStock.notes || '',
-            createdAt: dbStock.created_at,
-            updatedAt: dbStock.updated_at
-        };
+    async getMargins(startDate = null, endDate = null) {
+        try {
+            let url = `${this.apiBaseUrl}/dashboard/margins`;
+            const params = [];
+            if (startDate) params.push(`start_date=${startDate}`);
+            if (endDate) params.push(`end_date=${endDate}`);
+            if (params.length > 0) url += '?' + params.join('&');
+            
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching margins:', error);
+            return [];
+        }
     }
 };
 

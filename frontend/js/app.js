@@ -53,11 +53,19 @@ const app = {
             });
         }
         
-        const conversionForm = document.getElementById('conversion-form');
-        if (conversionForm) {
-            conversionForm.addEventListener('submit', (e) => {
+        const compraForm = document.getElementById('compra-form');
+        if (compraForm) {
+            compraForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                this.convertToStock();
+                this.registrarCompra();
+            });
+        }
+        
+        const ventaForm = document.getElementById('venta-form');
+        if (ventaForm) {
+            ventaForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.registrarVenta();
             });
         }
         
@@ -88,14 +96,14 @@ const app = {
         const filterStatus = document.getElementById('filter-status');
         if (filterStatus) {
             filterStatus.addEventListener('change', (e) => {
-                this.refreshDashboard();
+                this.refreshOpportunities();
             });
         }
         
         const searchInput = document.getElementById('search-input');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
-                this.refreshDashboard();
+                this.refreshOpportunities();
             });
         }
         
@@ -158,7 +166,9 @@ const app = {
         if (viewName === 'dashboard') {
             this.refreshBusinessDashboard();
         } else if (viewName === 'opportunities') {
-            this.refreshDashboard();
+            this.refreshOpportunities();
+        } else if (viewName === 'stock') {
+            this.refreshStock();
         } else if (viewName === 'channels') {
             this.refreshChannels();
         } else if (viewName === 'new') {
@@ -415,15 +425,15 @@ const app = {
         ui.renderCostsList('costs-list');
     },
     
-    async refreshDashboard() {
+    async refreshOpportunities() {
         try {
             const opportunities = await storage.getAll();
-            const filterStatus = document.getElementById('filter-status').value;
-            const searchTerm = document.getElementById('search-input').value;
+            const filterStatus = document.getElementById('filter-status')?.value || '';
+            const searchTerm = document.getElementById('search-input')?.value || '';
             
-            ui.renderDashboard(opportunities, filterStatus, searchTerm);
+            ui.renderOpportunities(opportunities, filterStatus, searchTerm);
         } catch (error) {
-            console.error('Error refreshing dashboard:', error);
+            console.error('Error refreshing opportunities:', error);
             alert('Error al cargar las oportunidades. Por favor, recarga la página.');
         }
     },
@@ -650,7 +660,7 @@ const app = {
             }
             
             this.showView('opportunities');
-            this.refreshDashboard();
+            this.refreshOpportunities();
         } catch (error) {
             console.error('Error saving opportunity:', error);
             const errorMessage = error.message || 'Error desconocido';
@@ -885,7 +895,7 @@ const app = {
             
             await storage.update(this.currentOpportunityId, updates);
             this.showView('opportunities');
-            this.refreshDashboard();
+            this.refreshOpportunities();
         } catch (error) {
             console.error('Error saving detail:', error);
             alert('Error al guardar los cambios. Por favor, inténtalo de nuevo.');
@@ -900,7 +910,7 @@ const app = {
                 const success = await storage.delete(this.currentOpportunityId);
                 if (success) {
                     this.showView('opportunities');
-                    this.refreshDashboard();
+                    this.refreshOpportunities();
                 } else {
                     alert('Error al eliminar la oportunidad.');
                 }
@@ -911,70 +921,223 @@ const app = {
         }
     },
     
-    openConversionModal(opportunityId, estimatedPrice) {
-        const modal = document.getElementById('conversion-modal');
-        const opportunityIdInput = document.getElementById('conversion-opportunity-id');
-        const realPriceInput = document.getElementById('conversion-real-price');
-        const unitsInput = document.getElementById('conversion-units');
+    async openCompraModal(opportunityId, canalOrigenId, estimatedPrice, productName = null) {
+        const modal = document.getElementById('compra-modal');
+        const opportunityIdInput = document.getElementById('compra-opportunity-id');
+        const canalOrigenIdInput = document.getElementById('compra-canal-origen-id');
+        const productNameInput = document.getElementById('compra-product-name');
+        const productNameDisplay = document.getElementById('compra-product-name-display');
+        const precioUnitarioInput = document.getElementById('compra-precio-unitario');
+        const unidadesInput = document.getElementById('compra-unidades');
+        const fechaInput = document.getElementById('compra-fecha');
         
-        if (!modal || !opportunityIdInput || !realPriceInput || !unitsInput) {
-            console.error('Conversion modal elements not found');
+        if (!modal || !opportunityIdInput || !canalOrigenIdInput || !productNameInput || !productNameDisplay || !precioUnitarioInput || !unidadesInput || !fechaInput) {
+            console.error('Compra modal elements not found');
             return;
         }
         
-        opportunityIdInput.value = opportunityId;
-        realPriceInput.value = estimatedPrice || '';
-        unitsInput.value = 1;
+        let finalProductName = productName;
+        
+        // Si viene de una oportunidad, obtener el productName de la oportunidad
+        if (opportunityId && !productName) {
+            try {
+                const opportunity = await storage.getById(opportunityId);
+                if (opportunity && opportunity.productName) {
+                    finalProductName = opportunity.productName;
+                }
+            } catch (error) {
+                console.error('Error loading opportunity:', error);
+            }
+        }
+        
+        opportunityIdInput.value = opportunityId || '';
+        canalOrigenIdInput.value = canalOrigenId || '';
+        productNameInput.value = finalProductName || '';
+        productNameDisplay.value = finalProductName || '';
+        precioUnitarioInput.value = estimatedPrice || '';
+        unidadesInput.value = 1;
+        fechaInput.value = new Date().toISOString().split('T')[0];
         modal.classList.remove('hidden');
     },
     
-    closeConversionModal() {
-        const modal = document.getElementById('conversion-modal');
+    closeCompraModal() {
+        const modal = document.getElementById('compra-modal');
         if (modal) {
             modal.classList.add('hidden');
         }
         
-        const form = document.getElementById('conversion-form');
+        const form = document.getElementById('compra-form');
         if (form) {
             form.reset();
         }
     },
     
-    closeConversionModalOnOverlay(event) {
-        if (event.target.id === 'conversion-modal') {
-            this.closeConversionModal();
+    closeCompraModalOnOverlay(event) {
+        if (event.target.id === 'compra-modal') {
+            this.closeCompraModal();
         }
     },
     
-    async convertToStock() {
-        const opportunityId = document.getElementById('conversion-opportunity-id').value;
-        const realPrice = document.getElementById('conversion-real-price').value;
-        const units = document.getElementById('conversion-units').value;
+    async registrarCompra() {
+        const opportunityId = document.getElementById('compra-opportunity-id').value;
+        const canalOrigenId = document.getElementById('compra-canal-origen-id').value;
+        const productName = document.getElementById('compra-product-name').value;
+        const precioUnitario = document.getElementById('compra-precio-unitario').value;
+        const unidades = document.getElementById('compra-unidades').value;
+        const fecha = document.getElementById('compra-fecha').value;
         
-        if (!opportunityId || !realPrice || !units) {
-            alert('Por favor, completa todos los campos');
+        if (!canalOrigenId) {
+            alert('El canal de origen es obligatorio');
             return;
         }
         
-        if (parseFloat(realPrice) < 0) {
-            alert('El precio de compra debe ser mayor o igual a 0');
+        if (!productName || !productName.trim()) {
+            alert('El nombre del producto es obligatorio');
             return;
         }
         
-        if (parseInt(units) <= 0) {
+        if (!precioUnitario || parseFloat(precioUnitario) < 0) {
+            alert('El precio unitario debe ser mayor o igual a 0');
+            return;
+        }
+        
+        if (!unidades || parseInt(unidades) <= 0) {
             alert('Las unidades deben ser mayor a 0');
             return;
         }
         
+        if (!fecha) {
+            alert('La fecha de compra es obligatoria');
+            return;
+        }
+        
         try {
-            await stockStorage.convertFromOpportunity(opportunityId, realPrice, units);
-            this.closeConversionModal();
+            await comprasStorage.createFromOpportunity(
+                opportunityId || null,
+                canalOrigenId,
+                productName.trim(),
+                precioUnitario,
+                unidades,
+                [],
+                fecha
+            );
+            this.closeCompraModal();
             await this.loadChannels();
-            this.refreshDashboard();
-            alert('Oportunidad convertida a stock exitosamente');
+            if (opportunityId) {
+                this.refreshOpportunities();
+            }
+            this.refreshStock();
+            this.refreshBusinessDashboard();
+            alert('Compra registrada exitosamente. El stock ha sido creado automáticamente.');
         } catch (error) {
-            console.error('Error converting to stock:', error);
-            alert('Error al convertir a stock: ' + (error.message || 'Error desconocido'));
+            console.error('Error registrando compra:', error);
+            alert('Error al registrar la compra: ' + (error.message || 'Error desconocido'));
+        }
+    },
+    
+    async openVentaModal(stockId, unidadesDisponibles, estimatedPrice = null) {
+        const modal = document.getElementById('venta-modal');
+        const stockIdInput = document.getElementById('venta-stock-id');
+        const canalDestinoSelect = document.getElementById('venta-canal-destino');
+        const precioUnitarioInput = document.getElementById('venta-precio-unitario');
+        const unidadesInput = document.getElementById('venta-unidades');
+        const unidadesMaxSpan = document.getElementById('venta-unidades-max');
+        const fechaInput = document.getElementById('venta-fecha');
+        
+        if (!modal || !stockIdInput || !canalDestinoSelect || !precioUnitarioInput || !unidadesInput || !fechaInput) {
+            console.error('Venta modal elements not found');
+            return;
+        }
+        
+        stockIdInput.value = stockId;
+        unidadesMaxSpan.textContent = unidadesDisponibles;
+        unidadesInput.max = unidadesDisponibles;
+        unidadesInput.value = Math.min(1, unidadesDisponibles);
+        precioUnitarioInput.value = estimatedPrice || '';
+        fechaInput.value = new Date().toISOString().split('T')[0];
+        
+        // Cargar canales en el select
+        await this.loadChannels();
+        if (this.allChannels && this.allChannels.length > 0) {
+            canalDestinoSelect.innerHTML = '<option value="">Selecciona un canal</option>' + 
+                this.allChannels.map(ch => `<option value="${ch.id}">${ui.escapeHtml(ch.name)}</option>`).join('');
+        }
+        
+        modal.classList.remove('hidden');
+    },
+    
+    closeVentaModal() {
+        const modal = document.getElementById('venta-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+        
+        const form = document.getElementById('venta-form');
+        if (form) {
+            form.reset();
+        }
+    },
+    
+    closeVentaModalOnOverlay(event) {
+        if (event.target.id === 'venta-modal') {
+            this.closeVentaModal();
+        }
+    },
+    
+    async registrarVenta() {
+        const stockId = document.getElementById('venta-stock-id').value;
+        const canalDestinoId = document.getElementById('venta-canal-destino').value;
+        const precioUnitario = document.getElementById('venta-precio-unitario').value;
+        const unidades = document.getElementById('venta-unidades').value;
+        const fecha = document.getElementById('venta-fecha').value;
+        const unidadesMax = parseInt(document.getElementById('venta-unidades-max').textContent);
+        
+        if (!stockId) {
+            alert('Error: ID de stock no válido');
+            return;
+        }
+        
+        if (!canalDestinoId) {
+            alert('El canal de destino es obligatorio');
+            return;
+        }
+        
+        if (!precioUnitario || parseFloat(precioUnitario) < 0) {
+            alert('El precio unitario debe ser mayor o igual a 0');
+            return;
+        }
+        
+        if (!unidades || parseInt(unidades) <= 0) {
+            alert('Las unidades deben ser mayor a 0');
+            return;
+        }
+        
+        if (parseInt(unidades) > unidadesMax) {
+            alert(`No puedes vender más unidades de las disponibles (${unidadesMax})`);
+            return;
+        }
+        
+        if (!fecha) {
+            alert('La fecha de venta es obligatoria');
+            return;
+        }
+        
+        try {
+            await ventasStorage.create(
+                stockId,
+                canalDestinoId,
+                precioUnitario,
+                unidades,
+                [],
+                fecha
+            );
+            this.closeVentaModal();
+            this.refreshStock();
+            this.refreshBusinessDashboard();
+            alert('Venta registrada exitosamente. El stock ha sido actualizado automáticamente.');
+        } catch (error) {
+            console.error('Error registrando venta:', error);
+            alert('Error al registrar la venta: ' + (error.message || 'Error desconocido'));
         }
     },
     
