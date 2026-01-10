@@ -11,9 +11,23 @@ const isValidUUID = (str) => {
   return uuidRegex.test(str);
 };
 
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://benevolent-dieffenbachia-31b8be.netlify.app'
+];
+
 app.use(cors({
-  origin: 'http://localhost:3000',
-  credentials: true
+  origin: function (origin, callback) {
+    // Permite requests sin origin (Postman, curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Not allowed by CORS'));
+  }
 }));
 app.use(express.json());
 
