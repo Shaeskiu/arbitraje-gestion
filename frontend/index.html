@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Arbitraje Comercial</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="./assets/favicon.png" />
     <style>
         [data-view] {
             display: none;
@@ -18,7 +19,9 @@
     <div class="flex h-screen">
         <aside class="w-64 bg-white shadow-lg border-r border-gray-200">
             <div class="p-6">
-                <h1 class="text-xl font-bold text-gray-900 mb-8">Arbitraje Gestión</h1>
+                <button onclick="app.showView('dashboard')" class="cursor-pointer hover:opacity-80 transition-opacity focus:outline-none">
+                    <img src="./assets/logo.png" alt="Arbitraje Gestión" class="h-15" />
+                </button>
                 <nav class="space-y-2">
                     <button data-nav="dashboard" class="nav-link w-full text-left px-4 py-3 text-sm font-medium bg-indigo-50 text-indigo-700 rounded-md transition-colors">
                         Oportunidades
