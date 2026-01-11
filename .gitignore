@@ -3,6 +3,8 @@ node_modules/
 
 # Environment variables
 .env
+frontend/config.js
+
 
 # Logs
 npm-debug.log*
