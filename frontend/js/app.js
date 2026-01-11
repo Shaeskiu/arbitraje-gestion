@@ -167,16 +167,18 @@ const app = {
             this.refreshBusinessDashboard();
         } else if (viewName === 'opportunities') {
             this.refreshOpportunities();
+        } else if (viewName === 'compras') {
+            this.refreshCompras();
         } else if (viewName === 'stock') {
             this.refreshStock();
+        } else if (viewName === 'ventas') {
+            this.refreshVentas();
         } else if (viewName === 'channels') {
             this.refreshChannels();
         } else if (viewName === 'new') {
             this.initializeOpportunityForm();
         } else if (viewName === 'channel-form') {
             this.initializeChannelForm();
-        } else if (viewName === 'stock') {
-            this.refreshStock();
         }
     },
     
@@ -1148,6 +1150,26 @@ const app = {
         } catch (error) {
             console.error('Error refreshing stock:', error);
             alert('Error al cargar el stock.');
+        }
+    },
+    
+    async refreshCompras() {
+        try {
+            const compras = await comprasStorage.getAll();
+            ui.renderCompras(compras);
+        } catch (error) {
+            console.error('Error refreshing compras:', error);
+            alert('Error al cargar las compras.');
+        }
+    },
+    
+    async refreshVentas() {
+        try {
+            const ventas = await ventasStorage.getAll();
+            ui.renderVentas(ventas);
+        } catch (error) {
+            console.error('Error refreshing ventas:', error);
+            alert('Error al cargar las ventas.');
         }
     },
     

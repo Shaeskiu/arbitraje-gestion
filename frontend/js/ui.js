@@ -800,5 +800,126 @@ const ui = {
         
         html += '</tbody></table>';
         container.innerHTML = html;
+    },
+    
+    renderCompras(compras) {
+        const tbody = document.getElementById('compras-table');
+        if (!tbody) {
+            console.error('Compras table body not found');
+            return;
+        }
+        
+        tbody.innerHTML = '';
+        
+        if (!compras || compras.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">No hay compras registradas</td></tr>';
+            return;
+        }
+        
+        compras.forEach(compra => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50';
+            
+            const fechaFormateada = compra.fecha_compra 
+                ? new Date(compra.fecha_compra).toLocaleDateString('es-ES')
+                : 'N/A';
+            
+            const producto = compra.product_name || compra.oportunidad_product_name || 'Sin producto';
+            const canalOrigen = compra.canal_origen_name || 'N/A';
+            const desdeOportunidad = compra.oportunidad_id ? 'Sí' : 'No';
+            const desdeOportunidadClass = compra.oportunidad_id 
+                ? 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800'
+                : 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800';
+            
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${fechaFormateada}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${this.escapeHtml(producto)}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${this.escapeHtml(canalOrigen)}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${compra.unidades || 0}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${this.formatCurrency(compra.precio_unitario || 0)}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-indigo-600">${this.formatCurrency(compra.total_compra || 0)}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="${desdeOportunidadClass}">
+                        ${desdeOportunidad}
+                    </span>
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+    },
+    
+    renderVentas(ventas) {
+        const tbody = document.getElementById('ventas-table');
+        if (!tbody) {
+            console.error('Ventas table body not found');
+            return;
+        }
+        
+        tbody.innerHTML = '';
+        
+        if (!ventas || ventas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">No hay ventas registradas</td></tr>';
+            return;
+        }
+        
+        ventas.forEach(venta => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50';
+            
+            const fechaFormateada = venta.fecha_venta 
+                ? new Date(venta.fecha_venta).toLocaleDateString('es-ES')
+                : 'N/A';
+            
+            const producto = venta.product_name || 'Sin producto';
+            const canalDestino = venta.canal_destino_name || 'N/A';
+            
+            // Calcular margen si tenemos el coste del stock asociado
+            // Por ahora, si viene en los datos enriquecidos lo usamos, sino mostramos N/A
+            let margenHtml = '<span class="text-sm text-gray-500">N/A</span>';
+            if (venta.margen !== undefined && venta.margen !== null) {
+                const margen = parseFloat(venta.margen);
+                const margenClass = margen >= 0 ? 'text-green-600' : 'text-red-600';
+                margenHtml = `<span class="text-sm font-medium ${margenClass}">${this.formatCurrency(margen)}</span>`;
+            }
+            
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${fechaFormateada}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${this.escapeHtml(producto)}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${this.escapeHtml(canalDestino)}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${venta.unidades || 0}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${this.formatCurrency(venta.precio_unitario || 0)}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-green-600">${this.formatCurrency(venta.total_venta || 0)}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    ${margenHtml}
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
     }
 };

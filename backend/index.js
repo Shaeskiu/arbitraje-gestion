@@ -1080,16 +1080,16 @@ app.get('/ventas', async (req, res) => {
       const stockIds = [...new Set(ventas.map(v => v.stock_id).filter(Boolean))];
       const channelIds = [...new Set(ventas.map(v => v.canal_destino_id).filter(Boolean))];
 
-      const { data: stockItems } = await supabase
-        .from('stock')
-        .select('id, compra_id')
-        .in('id', stockIds);
+      // Obtener stock con coste_unitario_real para calcular margen
+      const { data: stockItems } = stockIds.length > 0
+        ? await supabase.from('stock').select('id, compra_id, coste_unitario_real').in('id', stockIds)
+        : { data: [] };
 
       const compraIds = [...new Set(stockItems?.map(s => s.compra_id).filter(Boolean) || [])];
       
       const [channelsData, comprasData] = await Promise.all([
         channelIds.length > 0 ? supabase.from('channels').select('id, name').in('id', channelIds) : { data: [] },
-        compraIds.length > 0 ? supabase.from('compras').select('id, oportunidad_id').in('id', compraIds) : { data: [] }
+        compraIds.length > 0 ? supabase.from('compras').select('id, oportunidad_id, product_name').in('id', compraIds) : { data: [] }
       ]);
 
       const oppIds = [...new Set(comprasData.data?.map(c => c.oportunidad_id).filter(Boolean) || [])];
@@ -1120,10 +1120,26 @@ app.get('/ventas', async (req, res) => {
       const enriched = ventas.map(venta => {
         const stock = stockMap[venta.stock_id];
         const compra = stock ? comprasMap[stock.compra_id] : null;
+        
+        // Obtener product_name: primero de la venta (denormalized), luego de compra, luego de opportunity
+        let productName = venta.product_name;
+        if (!productName && compra) {
+          productName = compra.product_name || (compra.oportunidad_id && oppsMap[compra.oportunidad_id]) || null;
+        }
+        
+        // Calcular margen: total_venta - (coste_unitario_real del stock * unidades)
+        let margen = null;
+        if (stock && stock.coste_unitario_real) {
+          const costeTotal = parseFloat(stock.coste_unitario_real) * parseInt(venta.unidades);
+          const totalVenta = parseFloat(venta.total_venta) || 0;
+          margen = totalVenta - costeTotal;
+        }
+        
         return {
           ...venta,
+          product_name: productName || 'Producto vendido',
           canal_destino_name: channelsMap[venta.canal_destino_id] || null,
-          producto_name: compra && oppsMap[compra.oportunidad_id] ? oppsMap[compra.oportunidad_id] : null
+          margen: margen
         };
       });
 

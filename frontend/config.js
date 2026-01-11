@@ -7,5 +7,5 @@
 
 window.APP_CONFIG = {
     // URL base de la API backend
-    API_BASE_URL: 'https://arbitraje-gestion-production.up.railway.app'
+    API_BASE_URL: 'http://localhost:3001'
 };
