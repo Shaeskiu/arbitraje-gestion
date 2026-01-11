@@ -14,7 +14,8 @@ const isValidUUID = (str) => {
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://benevolent-dieffenbachia-31b8be.netlify.app'
+  'https://benevolent-dieffenbachia-31b8be.netlify.app',
+  'https://shaeskiu.github.io/arbitraje-gestion/'
 ];
 
 app.use(cors({
