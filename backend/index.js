@@ -1327,7 +1327,7 @@ app.get('/dashboard/margins', async (req, res) => {
       compras.forEach(c => { comprasMap[c.id] = c; });
     }
 
-    // Group by month and calculate margins
+    // Group by month and calculate margin percentages (average per month)
     const monthlyMargins = {};
     
     ventas.forEach(venta => {
@@ -1335,7 +1335,7 @@ app.get('/dashboard/margins', async (req, res) => {
       const month = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
       
       if (!monthlyMargins[month]) {
-        monthlyMargins[month] = { gross_margin: 0, net_margin: 0 };
+        monthlyMargins[month] = { gross_margin_percents: [], net_margin_percents: [] };
       }
       
       const stock = stockMap[venta.stock_id];
@@ -1349,35 +1349,47 @@ app.get('/dashboard/margins', async (req, res) => {
       const costeUnitarioCompra = stock.coste_unitario_real;
       const costeCompraProporcional = costeUnitarioCompra * unidadesVendidas;
 
+      // Skip if coste is zero to avoid division by zero
+      if (costeCompraProporcional === 0) return;
+
       // Calculate total venta (ya incluye descuento de costes_venta)
       const totalVenta = parseFloat(venta.total_venta) || 0;
 
-      // Gross margin = total_venta - coste_compra_proporcional
+      // Calculate gross margin percentage: ((total_venta - coste_compra) / coste_compra) * 100
       const grossMargin = totalVenta - costeCompraProporcional;
-      monthlyMargins[month].gross_margin += grossMargin;
+      const grossMarginPercent = (grossMargin / costeCompraProporcional) * 100;
+      monthlyMargins[month].gross_margin_percents.push(grossMarginPercent);
 
-      // Calculate costes de venta (ya están descontados en total_venta, pero los incluimos para net margin)
+      // Calculate costes de venta
       const costesVentaArray = Array.isArray(venta.costes_venta) ? venta.costes_venta : [];
       const totalCostesVenta = costesVentaArray.reduce((sum, coste) => {
         return sum + (parseFloat(coste.value) || 0);
       }, 0);
 
-      // Net margin = total_venta - coste_compra_proporcional - costes_venta
-      // Pero total_venta ya incluye descuento de costes_venta, así que:
+      // Calculate net margin percentage
       // Net margin = (precio_unitario * unidades) - coste_compra_proporcional - costes_venta
       const precioUnitario = parseFloat(venta.precio_unitario) || 0;
       const ingresosBrutos = precioUnitario * unidadesVendidas;
       const netMargin = ingresosBrutos - costeCompraProporcional - totalCostesVenta;
-      
-      monthlyMargins[month].net_margin += netMargin;
+      const netMarginPercent = (netMargin / costeCompraProporcional) * 100;
+      monthlyMargins[month].net_margin_percents.push(netMarginPercent);
     });
 
-    // Convert to array format
-    const result = Object.entries(monthlyMargins).map(([month, margins]) => ({
-      month,
-      gross_margin: parseFloat(margins.gross_margin.toFixed(2)),
-      net_margin: parseFloat(margins.net_margin.toFixed(2))
-    })).sort((a, b) => a.month.localeCompare(b.month));
+    // Convert to array format with average percentages
+    const result = Object.entries(monthlyMargins).map(([month, margins]) => {
+      const avgGrossMargin = margins.gross_margin_percents.length > 0
+        ? margins.gross_margin_percents.reduce((sum, p) => sum + p, 0) / margins.gross_margin_percents.length
+        : 0;
+      const avgNetMargin = margins.net_margin_percents.length > 0
+        ? margins.net_margin_percents.reduce((sum, p) => sum + p, 0) / margins.net_margin_percents.length
+        : 0;
+      
+      return {
+        month,
+        gross_margin_percent: parseFloat(avgGrossMargin.toFixed(2)),
+        net_margin_percent: parseFloat(avgNetMargin.toFixed(2))
+      };
+    }).sort((a, b) => a.month.localeCompare(b.month));
 
     res.json(result);
   } catch (error) {

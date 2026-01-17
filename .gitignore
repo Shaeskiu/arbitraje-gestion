@@ -3,7 +3,7 @@ node_modules/
 
 # Environment variables
 .env
-frontend/config.js
+/frontend/congig.js
 
 
 # Logs

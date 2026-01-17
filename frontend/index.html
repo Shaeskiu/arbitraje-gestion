@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Arbitraje Comercial</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="icon" href="./assets/favicon.png" />
     <style>
         [data-view] {
@@ -144,8 +145,8 @@
                             </div>
                         </div>
                     </div>
-                    <div id="sales-chart-container" class="h-64 flex items-center justify-center text-gray-500">
-                        Cargando datos...
+                    <div id="sales-chart-container" class="h-64 relative">
+                        <div class="absolute inset-0 flex items-center justify-center text-gray-500">Cargando datos...</div>
                     </div>
                 </div>
 
@@ -166,8 +167,8 @@
                             <button onclick="app.loadMarginsChart()" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">Aplicar</button>
                         </div>
                     </div>
-                    <div id="margins-chart-container" class="h-64 flex items-center justify-center text-gray-500">
-                        Cargando datos...
+                    <div id="margins-chart-container" class="h-64 relative">
+                        <div class="absolute inset-0 flex items-center justify-center text-gray-500">Cargando datos...</div>
                     </div>
                 </div>
             </div>

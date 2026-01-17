@@ -5,6 +5,8 @@ const app = {
     channelOriginCosts: [],
     channelDestCosts: [],
     allChannels: [],
+    salesChartInstance: null,
+    marginsChartInstance: null,
     
     init() {
         this.setupNavigation();
@@ -535,37 +537,83 @@ const app = {
             return;
         }
         
-        // Simple table-based visualization
-        const maxValue = Math.max(...data.map(d => d.amount || 0));
-        const rows = data.map(item => {
-            const barWidth = maxValue > 0 ? (item.amount / maxValue) * 100 : 0;
-            return `
-                <tr class="border-b">
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.period || 'N/A'}</td>
-                    <td class="px-4 py-2">
-                        <div class="w-full bg-gray-200 rounded-full h-6">
-                            <div class="bg-indigo-600 h-6 rounded-full" style="width: ${barWidth}%"></div>
-                        </div>
-                    </td>
-                    <td class="px-4 py-2 text-sm font-medium text-gray-900 text-right">€${parseFloat(item.amount || 0).toFixed(2)}</td>
-                </tr>
-            `;
-        }).join('');
+        // Clear container and create canvas
+        container.innerHTML = '<canvas id="sales-chart"></canvas>';
+        const canvas = document.getElementById('sales-chart');
+        if (!canvas) return;
         
-        container.innerHTML = `
-            <div class="w-full overflow-x-auto">
-                <table class="min-w-full">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Período</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ventas</th>
-                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>
-            </div>
-        `;
+        // Destroy existing chart if it exists
+        if (this.salesChartInstance) {
+            this.salesChartInstance.destroy();
+        }
+        
+        const ctx = canvas.getContext('2d');
+        const labels = data.map(item => item.period || 'N/A');
+        const amounts = data.map(item => parseFloat(item.amount || 0));
+        
+        this.salesChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Ventas (€)',
+                    data: amounts,
+                    borderColor: 'rgb(99, 102, 241)',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: 'rgb(99, 102, 241)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return 'Ventas: €' + parseFloat(context.parsed.y).toFixed(2);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '€' + parseFloat(value).toFixed(2);
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Monto (€)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Período'
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
     },
     
     renderMarginsChart(data) {
@@ -577,49 +625,109 @@ const app = {
             return;
         }
         
-        const maxValue = Math.max(...data.map(d => Math.max(d.gross_margin || 0, d.net_margin || 0)));
-        const rows = data.map(item => {
-            const grossWidth = maxValue > 0 ? (Math.abs(item.gross_margin || 0) / maxValue) * 100 : 0;
-            const netWidth = maxValue > 0 ? (Math.abs(item.net_margin || 0) / maxValue) * 100 : 0;
-            const grossColor = (item.gross_margin || 0) >= 0 ? 'bg-green-600' : 'bg-red-600';
-            const netColor = (item.net_margin || 0) >= 0 ? 'bg-blue-600' : 'bg-red-600';
-            
-            return `
-                <tr class="border-b">
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.month || 'N/A'}</td>
-                    <td class="px-4 py-2">
-                        <div class="mb-1">
-                            <div class="text-xs text-gray-600 mb-1">Margen Bruto</div>
-                            <div class="w-full bg-gray-200 rounded-full h-4">
-                                <div class="${grossColor} h-4 rounded-full" style="width: ${grossWidth}%"></div>
-                            </div>
-                            <div class="text-xs font-medium ${(item.gross_margin || 0) >= 0 ? 'text-green-700' : 'text-red-700'} mt-1">€${parseFloat(item.gross_margin || 0).toFixed(2)}</div>
-                        </div>
-                        <div>
-                            <div class="text-xs text-gray-600 mb-1">Margen Neto</div>
-                            <div class="w-full bg-gray-200 rounded-full h-4">
-                                <div class="${netColor} h-4 rounded-full" style="width: ${netWidth}%"></div>
-                            </div>
-                            <div class="text-xs font-medium ${(item.net_margin || 0) >= 0 ? 'text-blue-700' : 'text-red-700'} mt-1">€${parseFloat(item.net_margin || 0).toFixed(2)}</div>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }).join('');
+        // Clear container and create canvas
+        container.innerHTML = '<canvas id="margins-chart"></canvas>';
+        const canvas = document.getElementById('margins-chart');
+        if (!canvas) return;
         
-        container.innerHTML = `
-            <div class="w-full overflow-x-auto">
-                <table class="min-w-full">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Mes</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Márgenes</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>
-            </div>
-        `;
+        // Destroy existing chart if it exists
+        if (this.marginsChartInstance) {
+            this.marginsChartInstance.destroy();
+        }
+        
+        const ctx = canvas.getContext('2d');
+        const labels = data.map(item => item.month || 'N/A');
+        const grossMargins = data.map(item => parseFloat(item.gross_margin_percent || 0));
+        const netMargins = data.map(item => parseFloat(item.net_margin_percent || 0));
+        
+        this.marginsChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Margen Bruto (%)',
+                        data: grossMargins,
+                        borderColor: 'rgb(34, 197, 94)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        tension: 0.4,
+                        fill: false,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: 'rgb(34, 197, 94)',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    },
+                    {
+                        label: 'Margen Neto (%)',
+                        data: netMargins,
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: false,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: 'rgb(59, 130, 246)',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                const value = parseFloat(context.parsed.y);
+                                const sign = value >= 0 ? '+' : '';
+                                return context.dataset.label + ': ' + sign + value.toFixed(2) + '%';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: {
+                            callback: function(value) {
+                                const sign = value >= 0 ? '+' : '';
+                                return sign + parseFloat(value).toFixed(2) + '%';
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Margen (%)'
+                        },
+                        grid: {
+                            color: function(context) {
+                                if (context.tick.value === 0) {
+                                    return 'rgba(0, 0, 0, 0.3)';
+                                }
+                                return 'rgba(0, 0, 0, 0.1)';
+                            }
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Mes'
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
     },
     
     async saveOpportunity() {
