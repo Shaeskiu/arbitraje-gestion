@@ -197,6 +197,14 @@ const storage = {
             dbOpp.notes = opportunity.notes ? String(opportunity.notes).trim() : null;
         }
         
+        if (opportunity.offerLink !== undefined) {
+            dbOpp.offer_link = opportunity.offerLink ? String(opportunity.offerLink).trim() : null;
+        }
+        
+        if (opportunity.marketPriceLink !== undefined) {
+            dbOpp.market_price_link = opportunity.marketPriceLink ? String(opportunity.marketPriceLink).trim() : null;
+        }
+        
         return dbOpp;
     },
     
@@ -231,6 +239,8 @@ const storage = {
             margenEstimado: dbOpportunity.margen_estimado ? parseFloat(dbOpportunity.margen_estimado) : (precioEstimadoVenta - precioEstimadoCompra),
             status: dbOpportunity.status,
             notes: dbOpportunity.notes,
+            offerLink: dbOpportunity.offer_link || null,
+            marketPriceLink: dbOpportunity.market_price_link || null,
             costs: costs.map(cost => ({
                 id: cost.id,
                 name: cost.name,

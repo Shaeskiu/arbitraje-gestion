@@ -1,0 +1,138 @@
+services:
+  # Kong API Gateway - Punto de entrada único para Supabase
+  kong:
+    image: kong:2.8.1
+    container_name: arbitraje-kong
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+    ports:
+      - "8000:8000"  # API REST (Supabase URL)
+    volumes:
+      - ./supabase/kong.yml:/var/lib/kong/kong.yml:ro
+    networks:
+      - arbitraje-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL Database
+  supabase-db:
+    image: postgres:15-alpine
+    container_name: arbitraje-supabase-db
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    ports:
+      - "54322:5432"
+    volumes:
+      - supabase_db_data:/var/lib/postgresql/data
+      - ./supabase/setup.sql:/docker-entrypoint-initdb.d/00-setup.sql:ro
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    networks:
+      - arbitraje-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgREST - API REST automática
+  postgrest:
+    image: postgrest/postgrest:v12.0.0
+    container_name: arbitraje-postgrest
+    environment:
+      PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}@supabase-db:5432/postgres
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: postgres
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    networks:
+      - arbitraje-network
+    restart: unless-stopped
+
+  # GoTrue - Autenticación (deshabilitado temporalmente para simplificar)
+  # auth:
+  #   image: supabase/gotrue:v2.99.0
+  #   container_name: arbitraje-auth
+  #   environment:
+  #     GOTRUE_API_HOST: 0.0.0.0
+  #     GOTRUE_API_PORT: 9999
+  #     API_EXTERNAL_URL: http://localhost:8000
+  #     GOTRUE_DB_DRIVER: postgres
+  #     GOTRUE_DB_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}@supabase-db:5432/postgres
+  #     GOTRUE_SITE_URL: http://localhost:3000
+  #     GOTRUE_URI_ALLOW_LIST: "*"
+  #     GOTRUE_DISABLE_SIGNUP: "false"
+  #     GOTRUE_JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters-long}
+  #     GOTRUE_JWT_EXP: ${JWT_EXP:-3600}
+  #     GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+  #     GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+  #     GOTRUE_MAILER_AUTOCONFIRM: "true"
+  #   depends_on:
+  #     supabase-db:
+  #       condition: service_healthy
+  #   networks:
+  #     - arbitraje-network
+  #   restart: unless-stopped
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: arbitraje-backend
+    environment:
+      NODE_ENV: ${ENVIRONMENT:-development}
+      PORT: ${PORT:-3001}
+      SUPABASE_URL: ${SUPABASE_URL:-http://kong:8000}
+      # Kong es el API Gateway que expone todos los servicios de Supabase
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+    ports:
+      - "${PORT:-3001}:3001"
+    depends_on:
+      kong:
+        condition: service_started
+      supabase-db:
+        condition: service_healthy
+    networks:
+      - arbitraje-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: arbitraje-frontend
+    environment:
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:3001}
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - arbitraje-network
+    restart: unless-stopped
+
+networks:
+  arbitraje-network:
+    driver: bridge
+
+volumes:
+  supabase_db_data:
+    driver: local

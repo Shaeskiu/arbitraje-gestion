@@ -151,14 +151,14 @@ const ui = {
             
             const originPriceInput = document.getElementById('origin-price');
             const destPriceInput = document.getElementById('dest-price');
-            const realSalePriceInput = document.getElementById('real-sale-price');
-            const statusSelect = document.getElementById('status');
+            const offerLinkInput = document.getElementById('offer-link');
+            const marketPriceLinkInput = document.getElementById('market-price-link');
             const notesTextarea = document.getElementById('notes');
             
             if (originPriceInput) originPriceInput.value = opportunity.originPrice || '';
             if (destPriceInput) destPriceInput.value = opportunity.destPrice || '';
-            if (realSalePriceInput) realSalePriceInput.value = opportunity.realSalePrice || '';
-            if (statusSelect) statusSelect.value = opportunity.status || 'detectada';
+            if (offerLinkInput) offerLinkInput.value = opportunity.offerLink || '';
+            if (marketPriceLinkInput) marketPriceLinkInput.value = opportunity.marketPriceLink || '';
             if (notesTextarea) notesTextarea.value = opportunity.notes || '';
             
             app.formCosts = opportunity.costs ? JSON.parse(JSON.stringify(opportunity.costs)) : [];
@@ -211,16 +211,16 @@ const ui = {
         } else {
             form.reset();
             const opportunityIdInput = document.getElementById('opportunity-id');
-            const statusSelect = document.getElementById('status');
-            const realSalePriceInput = document.getElementById('real-sale-price');
+            const offerLinkInput = document.getElementById('offer-link');
+            const marketPriceLinkInput = document.getElementById('market-price-link');
             const originChannelSelect = document.getElementById('origin-channel-select');
             const destChannelSelect = document.getElementById('dest-channel-select');
             const originChannelIdInput = document.getElementById('origin-channel-id');
             const destChannelIdInput = document.getElementById('dest-channel-id');
             
             if (opportunityIdInput) opportunityIdInput.value = '';
-            if (statusSelect) statusSelect.value = 'detectada';
-            if (realSalePriceInput) realSalePriceInput.value = '';
+            if (offerLinkInput) offerLinkInput.value = '';
+            if (marketPriceLinkInput) marketPriceLinkInput.value = '';
             if (originChannelSelect) originChannelSelect.value = '';
             if (destChannelSelect) destChannelSelect.value = '';
             if (originChannelIdInput) originChannelIdInput.value = '';
@@ -338,13 +338,10 @@ const ui = {
     updateFormCalculations() {
         const purchasePrice = parseFloat(document.getElementById('origin-price').value) || 0;
         const estimatedSalePrice = parseFloat(document.getElementById('dest-price').value) || 0;
-        const realSalePriceInput = document.getElementById('real-sale-price').value;
-        const realSalePrice = realSalePriceInput ? parseFloat(realSalePriceInput) : null;
         
         const tempOpportunity = {
             originPrice: purchasePrice,
             destPrice: estimatedSalePrice,
-            realSalePrice: realSalePrice,
             costs: app.formCosts || []
         };
         
@@ -365,17 +362,9 @@ const ui = {
         
         this.updateCostsBreakdown('costs-breakdown-content', 'costs-total', calc.estimated.costsBreakdown);
         
+        // Ocultar sección de cálculos reales ya que no se usa en el formulario
         const realSection = document.getElementById('calc-real-section');
-        if (calc.real) {
-            realSection.style.display = 'block';
-            document.getElementById('calc-margin-neto-real').textContent = arbitrage.formatCurrency(calc.real.netMargin);
-            document.getElementById('calc-rentabilidad-real').textContent = arbitrage.formatPercent(calc.real.profitability);
-            document.getElementById('calc-diferencia').textContent = arbitrage.formatCurrency(calc.marginDifference);
-            
-            const diffEl = document.getElementById('calc-diferencia');
-            diffEl.className = diffEl.className.replace(/text-\w+-\d+/, '');
-            diffEl.classList.add(calc.marginDifference >= 0 ? 'text-green-600' : 'text-red-600');
-        } else {
+        if (realSection) {
             realSection.style.display = 'none';
         }
     },
@@ -407,12 +396,23 @@ const ui = {
         document.getElementById('detail-dest-channel').textContent = opportunity.destChannel;
         document.getElementById('detail-dest-price').textContent = `Venta Estimada: ${arbitrage.formatCurrency(opportunity.destPrice)}`;
         
-        const realPriceEl = document.getElementById('detail-real-price');
-        if (opportunity.realSalePrice) {
-            realPriceEl.textContent = `Venta Real: ${arbitrage.formatCurrency(opportunity.realSalePrice)}`;
-            realPriceEl.style.display = 'block';
-        } else {
-            realPriceEl.style.display = 'none';
+        // Renderizar enlaces
+        const offerLinkContainer = document.getElementById('detail-offer-link-container');
+        if (offerLinkContainer) {
+            if (opportunity.offerLink && opportunity.offerLink.trim()) {
+                offerLinkContainer.innerHTML = `<a href="${this.escapeHtml(opportunity.offerLink)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 underline break-all">${this.escapeHtml(opportunity.offerLink)}</a>`;
+            } else {
+                offerLinkContainer.innerHTML = '<span class="text-gray-500">No disponible</span>';
+            }
+        }
+        
+        const marketPriceLinkContainer = document.getElementById('detail-market-price-link-container');
+        if (marketPriceLinkContainer) {
+            if (opportunity.marketPriceLink && opportunity.marketPriceLink.trim()) {
+                marketPriceLinkContainer.innerHTML = `<a href="${this.escapeHtml(opportunity.marketPriceLink)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 underline break-all">${this.escapeHtml(opportunity.marketPriceLink)}</a>`;
+            } else {
+                marketPriceLinkContainer.innerHTML = '<span class="text-gray-500">No disponible</span>';
+            }
         }
         
         document.getElementById('detail-margin-bruto').textContent = arbitrage.formatCurrency(calc.estimated.grossMargin);
@@ -421,7 +421,6 @@ const ui = {
         document.getElementById('detail-rentabilidad').textContent = arbitrage.formatPercent(calc.estimated.profitability);
         
         document.getElementById('detail-status').value = opportunity.status;
-        document.getElementById('detail-real-sale-price').value = opportunity.realSalePrice || '';
         document.getElementById('detail-notes').value = opportunity.notes || '';
         
         app.detailCosts = opportunity.costs ? JSON.parse(JSON.stringify(opportunity.costs)) : [];

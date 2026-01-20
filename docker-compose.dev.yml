@@ -1,0 +1,20 @@
+# Override para desarrollo con hot reload y volúmenes montados
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+    command: sh -c "npm install && node --watch index.js"
+    # En desarrollo, usar nodemon o node --watch para hot reload
+    # Si tienes nodemon instalado globalmente, puedes usar: nodemon index.js
+
+  frontend:
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    # En desarrollo, los cambios se reflejan inmediatamente al montar el volumen

@@ -1,0 +1,20 @@
+# Dockerfile para el backend de arbitraje-gestión
+FROM node:20-alpine
+
+# Establecer directorio de trabajo
+WORKDIR /app
+
+# Copiar archivos de dependencias
+COPY backend/package*.json ./
+
+# Instalar dependencias
+RUN npm ci --only=production
+
+# Copiar código de la aplicación
+COPY backend/ ./
+
+# Exponer puerto
+EXPOSE 3001
+
+# Comando para ejecutar la aplicación
+CMD ["node", "index.js"]

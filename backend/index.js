@@ -11,23 +11,31 @@ const isValidUUID = (str) => {
   return uuidRegex.test(str);
 };
 
-const allowedOrigins = [
+// CORS: Leer orígenes permitidos desde variable de entorno
+// Formato: CORS_ORIGINS=http://localhost:3000,https://tu-dominio.com
+// Si no está definida, usa valores por defecto para desarrollo
+const defaultOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://benevolent-dieffenbachia-31b8be.netlify.app',
   'https://shaeskiu.github.io'
 ];
 
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
+  : defaultOrigins;
+
 app.use(cors({
   origin: function (origin, callback) {
-    // Permite requests sin origin (Postman, curl)
+    // Permite requests sin origin (Postman, curl, etc.)
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
+      callback(null, true);
+    } else {
+      console.warn(`CORS: Origin not allowed: ${origin}`);
+      return callback(new Error('Not allowed by CORS'));
     }
-
-    return callback(new Error('Not allowed by CORS'));
   }
 }));
 app.use(express.json());

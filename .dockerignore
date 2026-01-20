@@ -1,0 +1,42 @@
+# Node modules
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Git
+.git/
+.gitignore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+frontend/config.js
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation
+*.md
+!README.md
+
+# SQL files (se copiarán manualmente al contenedor de DB)
+*.sql
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore

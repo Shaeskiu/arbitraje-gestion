@@ -71,7 +71,7 @@ const app = {
             });
         }
         
-        ['origin-price', 'dest-price', 'real-sale-price'].forEach(id => {
+        ['origin-price', 'dest-price'].forEach(id => {
             const element = document.getElementById(id);
             if (element) {
                 element.addEventListener('input', () => {
@@ -732,7 +732,6 @@ const app = {
     
     async saveOpportunity() {
         const id = document.getElementById('opportunity-id').value;
-        const realSalePriceInput = document.getElementById('real-sale-price').value;
         const originChannelId = document.getElementById('origin-channel-id').value;
         const destChannelId = document.getElementById('dest-channel-id').value;
         const originChannelSelect = document.getElementById('origin-channel-select');
@@ -746,7 +745,8 @@ const app = {
             destChannel: destChannelSelect ? destChannelSelect.options[destChannelSelect.selectedIndex]?.text : '',
             destChannelId: destChannelId || null,
             destPrice: parseFloat(document.getElementById('dest-price').value),
-            realSalePrice: realSalePriceInput ? parseFloat(realSalePriceInput) : null,
+            offerLink: document.getElementById('offer-link')?.value?.trim() || null,
+            marketPriceLink: document.getElementById('market-price-link')?.value?.trim() || null,
             costs: this.formCosts.filter(cost => cost.name && cost.name.trim().length > 0 && (cost.value || cost.value === 0)).map(cost => {
                 const cleanCost = {
                     name: cost.name,
@@ -758,7 +758,6 @@ const app = {
                 delete cleanCost.channelName;
                 return cleanCost;
             }),
-            status: document.getElementById('status').value,
             notes: document.getElementById('notes').value
         };
         
@@ -882,12 +881,7 @@ const app = {
     },
     
     setupDetailForm() {
-        const realSalePriceInput = document.getElementById('detail-real-sale-price');
-        if (realSalePriceInput) {
-            realSalePriceInput.addEventListener('input', () => {
-                this.updateDetailCalculations();
-            });
-        }
+        // Ya no hay campos que necesiten setup especial en el detalle
     },
     
     async updateDetailCalculations() {
@@ -901,11 +895,6 @@ const app = {
             destPrice: opportunity.destPrice,
             costs: this.detailCosts || []
         };
-        
-        const realSalePriceInput = document.getElementById('detail-real-sale-price').value;
-        const realSalePrice = realSalePriceInput ? parseFloat(realSalePriceInput) : null;
-        
-        tempOpportunity.realSalePrice = realSalePrice;
         
         const calc = arbitrage.calculate(tempOpportunity);
         ui.updateCostsBreakdown('detail-costs-breakdown-content', 'detail-costs-total', calc.estimated.costsBreakdown);
@@ -985,7 +974,6 @@ const app = {
                 return;
             }
             
-            const realSalePriceInput = document.getElementById('detail-real-sale-price');
             const statusInput = document.getElementById('detail-status');
             const notesInput = document.getElementById('detail-notes');
             
@@ -997,8 +985,9 @@ const app = {
                 destChannel: opportunity.destChannel,
                 destChannelId: opportunity.destChannelId,
                 destPrice: opportunity.destPrice,
+                offerLink: opportunity.offerLink || null,
+                marketPriceLink: opportunity.marketPriceLink || null,
                 status: statusInput ? statusInput.value : opportunity.status,
-                realSalePrice: realSalePriceInput && realSalePriceInput.value ? parseFloat(realSalePriceInput.value) : (opportunity.realSalePrice || null),
                 costs: this.detailCosts && this.detailCosts.length > 0 ? this.detailCosts.filter(cost => cost.name && (cost.value || cost.value === 0)) : opportunity.costs,
                 notes: notesInput ? notesInput.value : opportunity.notes
             };
