@@ -1,7 +1,11 @@
 const app = {
     currentOpportunityId: null,
+    currentVentaId: null,
+    currentVentaDetail: null,
     formCosts: [],
     detailCosts: [],
+    ventaCompraCosts: [],
+    ventaVentaCosts: [],
     channelOriginCosts: [],
     channelDestCosts: [],
     allChannels: [],
@@ -1267,6 +1271,192 @@ const app = {
         } catch (error) {
             console.error('Error refreshing ventas:', error);
             alert('Error al cargar las ventas.');
+        }
+    },
+
+    async showVentaDetail(id) {
+        try {
+            const detail = await ventasStorage.getById(id);
+            if (!detail || !detail.venta) {
+                alert('No se pudo cargar la venta. Por favor, inténtalo de nuevo.');
+                return;
+            }
+
+            this.currentVentaId = id;
+            this.currentVentaDetail = detail;
+
+            // Normalizar costes de compra y de venta
+            const compra = detail.compra || {};
+            const venta = detail.venta;
+
+            this.ventaCompraCosts = Array.isArray(compra.costes_compra)
+                ? compra.costes_compra.map(c => ({
+                    name: c.name || '',
+                    value: c.value !== undefined && c.value !== null ? parseFloat(c.value) : 0
+                }))
+                : [];
+
+            this.ventaVentaCosts = Array.isArray(venta.costes_venta)
+                ? venta.costes_venta.map(c => ({
+                    name: c.name || '',
+                    value: c.value !== undefined && c.value !== null ? parseFloat(c.value) : 0
+                }))
+                : [];
+
+            ui.renderVentaDetail(detail, this.ventaCompraCosts, this.ventaVentaCosts);
+            this.updateVentaDetailCalculations();
+            this.showView('venta-detail');
+        } catch (error) {
+            console.error('Error loading venta detail:', error);
+            alert('Error al cargar la venta.');
+        }
+    },
+
+    addVentaCost(role) {
+        if (role === 'compra') {
+            if (!this.ventaCompraCosts) this.ventaCompraCosts = [];
+            this.ventaCompraCosts.push({ name: '', value: 0 });
+        } else {
+            if (!this.ventaVentaCosts) this.ventaVentaCosts = [];
+            this.ventaVentaCosts.push({ name: '', value: 0 });
+        }
+
+        if (this.currentVentaDetail) {
+            ui.renderVentaDetail(this.currentVentaDetail, this.ventaCompraCosts, this.ventaVentaCosts);
+            this.updateVentaDetailCalculations();
+        }
+    },
+
+    removeVentaCost(role, index) {
+        const arr = role === 'compra' ? this.ventaCompraCosts : this.ventaVentaCosts;
+        if (arr && arr[index]) {
+            arr.splice(index, 1);
+            if (this.currentVentaDetail) {
+                ui.renderVentaDetail(this.currentVentaDetail, this.ventaCompraCosts, this.ventaVentaCosts);
+                this.updateVentaDetailCalculations();
+            }
+        }
+    },
+
+    updateVentaCostField(role, index, field, value) {
+        const arr = role === 'compra' ? this.ventaCompraCosts : this.ventaVentaCosts;
+        if (!arr || !arr[index]) return;
+
+        if (field === 'value') {
+            arr[index].value = parseFloat(value) || 0;
+        } else {
+            arr[index][field] = value;
+        }
+
+        this.updateVentaDetailCalculations();
+    },
+
+    updateVentaDetailCalculations() {
+        if (!this.currentVentaDetail || !this.currentVentaDetail.venta) return;
+
+        const venta = this.currentVentaDetail.venta;
+        const compra = this.currentVentaDetail.compra || null;
+
+        const unidades = parseInt(venta.unidades) || 0;
+        const precioUnitarioVenta = venta.precio_unitario ? parseFloat(venta.precio_unitario) : 0;
+
+        let precioUnitarioCompra = 0;
+        let unidadesCompra = unidades;
+
+        if (compra) {
+            if (compra.precio_unitario !== undefined && compra.precio_unitario !== null) {
+                precioUnitarioCompra = parseFloat(compra.precio_unitario) || 0;
+            }
+            if (compra.unidades !== undefined && compra.unidades !== null) {
+                unidadesCompra = parseInt(compra.unidades) || unidadesCompra;
+            }
+        }
+
+        const costesCompra = (this.ventaCompraCosts || []).reduce((sum, c) => {
+            return sum + (parseFloat(c.value) || 0);
+        }, 0);
+
+        const costesVenta = (this.ventaVentaCosts || []).reduce((sum, c) => {
+            return sum + (parseFloat(c.value) || 0);
+        }, 0);
+
+        const totalCompra = (precioUnitarioCompra * unidadesCompra) + costesCompra;
+        const costeProporcional = unidadesCompra > 0 ? (totalCompra / unidadesCompra) * unidades : 0;
+
+        const ingresosBrutos = precioUnitarioVenta * unidades;
+
+        const totalCostesVenta = costesVenta;
+        const totalCostes = costeProporcional + totalCostesVenta;
+
+        const margenNeto = ingresosBrutos - totalCostes;
+        const rentabilidad = costeProporcional > 0 ? (margenNeto / costeProporcional) * 100 : 0;
+
+        const totalCompraEl = document.getElementById('venta-detail-total-compra');
+        const totalVentaBrutaEl = document.getElementById('venta-detail-total-venta-bruta');
+        const totalCostesCompraEl = document.getElementById('venta-detail-total-costes-compra');
+        const totalCostesVentaEl = document.getElementById('venta-detail-total-costes-venta');
+        const margenNetoEl = document.getElementById('venta-detail-margin-neto');
+        const rentabilidadEl = document.getElementById('venta-detail-rentabilidad');
+
+        if (totalCompraEl) totalCompraEl.textContent = arbitrage.formatCurrency(costeProporcional);
+        if (totalVentaBrutaEl) totalVentaBrutaEl.textContent = arbitrage.formatCurrency(ingresosBrutos);
+        if (totalCostesCompraEl) totalCostesCompraEl.textContent = arbitrage.formatCurrency(costeProporcional);
+        if (totalCostesVentaEl) totalCostesVentaEl.textContent = arbitrage.formatCurrency(totalCostesVenta);
+        if (margenNetoEl) {
+            margenNetoEl.textContent = arbitrage.formatCurrency(margenNeto);
+            margenNetoEl.className = margenNetoEl.className.replace(/text-\w+-\d+/, '');
+            margenNetoEl.classList.add(margenNeto >= 0 ? 'text-green-600' : 'text-red-600');
+        }
+        if (rentabilidadEl) {
+            rentabilidadEl.textContent = arbitrage.formatPercent(rentabilidad);
+            rentabilidadEl.className = rentabilidadEl.className.replace(/text-\w+-\d+/, '');
+            rentabilidadEl.classList.add(rentabilidad >= 0 ? 'text-green-600' : 'text-red-600');
+        }
+    },
+
+    async saveVentaDetail() {
+        if (!this.currentVentaDetail || !this.currentVentaDetail.venta) {
+            return;
+        }
+
+        const detail = this.currentVentaDetail;
+        const compra = detail.compra;
+        const venta = detail.venta;
+
+        try {
+            // Actualizar compra si existe
+            if (compra && compra.id) {
+                const cleanCompraCosts = (this.ventaCompraCosts || [])
+                    .filter(c => c.name && c.name.trim().length > 0 && (c.value || c.value === 0))
+                    .map(c => ({
+                        name: c.name,
+                        value: parseFloat(c.value) || 0
+                    }));
+
+                await comprasStorage.update(compra.id, {
+                    costes_compra: cleanCompraCosts
+                });
+            }
+
+            // Actualizar venta
+            const cleanVentaCosts = (this.ventaVentaCosts || [])
+                .filter(c => c.name && c.name.trim().length > 0 && (c.value || c.value === 0))
+                .map(c => ({
+                    name: c.name,
+                    value: parseFloat(c.value) || 0
+                }));
+
+            await ventasStorage.update(venta.id, {
+                costes_venta: cleanVentaCosts
+            });
+
+            alert('Cambios de la venta guardados correctamente.');
+            this.showView('ventas');
+            this.refreshVentas();
+            this.refreshBusinessDashboard();
+        } catch (error) {
+            console.error('Error saving venta detail:', error);
+            alert('Error al guardar los cambios de la venta. Por favor, inténtalo de nuevo.');
         }
     },
     

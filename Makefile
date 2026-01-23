@@ -28,6 +28,7 @@ help:
 	@echo "  make shell-db       - Abrir shell en el contenedor de base de datos"
 	@echo "  make db-reset       - Resetear la base de datos (elimina todos los datos)"
 	@echo "  make status         - Ver estado de los contenedores"
+	@echo "  make load-fixtures  - Cargar datos de ejemplo (fixtures) en la base de datos"
 
 # Construir imágenes
 build:
@@ -117,6 +118,18 @@ db-reset:
 # Ver estado
 status:
 	$(COMPOSE_CMD) ps
+
+# Cargar fixtures de desarrollo
+load-fixtures:
+	@echo "Cargando fixtures de desarrollo..."
+	@if command -v psql >/dev/null 2>&1; then \
+		cd supabase/fixtures && psql -h localhost -p 54322 -U postgres -d postgres -f load.sql; \
+	else \
+		echo "⚠️  psql no disponible localmente. Copiando archivos al contenedor..."; \
+		docker cp supabase/fixtures/. arbitraje-supabase-db:/tmp/fixtures/ 2>/dev/null || \
+		$(COMPOSE_CMD) cp supabase/fixtures/. arbitraje-supabase-db:/tmp/fixtures/; \
+		$(COMPOSE_CMD) exec supabase-db psql -U postgres -d postgres -f /tmp/fixtures/load.sql; \
+	fi
 
 # Instalar dependencias del backend (útil para desarrollo)
 install-backend:

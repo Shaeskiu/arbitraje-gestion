@@ -870,7 +870,7 @@ const ui = {
         tbody.innerHTML = '';
         
         if (!ventas || ventas.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">No hay ventas registradas</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">No hay ventas registradas</td></tr>';
             return;
         }
         
@@ -916,9 +916,143 @@ const ui = {
                 <td class="px-6 py-4 whitespace-nowrap">
                     ${margenHtml}
                 </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button onclick="app.showVentaDetail('${venta.id}')" class="text-indigo-600 hover:text-indigo-900">
+                        Detalle
+                    </button>
+                </td>
             `;
             
             tbody.appendChild(row);
+        });
+    },
+
+    /**
+     * Renderiza la vista de detalle de una venta con los costes de compra y de venta
+     */
+    renderVentaDetail(detail, compraCosts, ventaCosts) {
+        if (!detail || !detail.venta) {
+            console.error('Venta detail is missing');
+            return;
+        }
+
+        const { venta, compra, canal_origen, canal_destino } = detail;
+
+        const productNameEl = document.getElementById('venta-detail-product-name');
+        const origenEl = document.getElementById('venta-detail-origin-channel');
+        const destinoEl = document.getElementById('venta-detail-dest-channel');
+        const fechaCompraEl = document.getElementById('venta-detail-fecha-compra');
+        const fechaVentaEl = document.getElementById('venta-detail-fecha-venta');
+        const unidadesEl = document.getElementById('venta-detail-unidades');
+        const precioCompraEl = document.getElementById('venta-detail-precio-compra');
+        const precioVentaEl = document.getElementById('venta-detail-precio-venta');
+
+        if (productNameEl) {
+            productNameEl.textContent = venta.product_name || 'Sin producto';
+        }
+
+        if (origenEl) {
+            origenEl.textContent = canal_origen && canal_origen.name ? canal_origen.name : (compra && compra.canal_origen_id ? 'Canal origen' : 'N/A');
+        }
+
+        if (destinoEl) {
+            destinoEl.textContent = canal_destino && canal_destino.name ? canal_destino.name : 'N/A';
+        }
+
+        if (fechaCompraEl) {
+            const fecha = compra && compra.fecha_compra ? new Date(compra.fecha_compra).toLocaleDateString('es-ES') : 'N/A';
+            fechaCompraEl.textContent = fecha;
+        }
+
+        if (fechaVentaEl) {
+            const fechaV = venta.fecha_venta ? new Date(venta.fecha_venta).toLocaleDateString('es-ES') : 'N/A';
+            fechaVentaEl.textContent = fechaV;
+        }
+
+        if (unidadesEl) {
+            unidadesEl.textContent = venta.unidades || 0;
+        }
+
+        if (precioCompraEl) {
+            const precioUnitarioCompra = compra && compra.precio_unitario ? parseFloat(compra.precio_unitario) : 0;
+            precioCompraEl.textContent = this.formatCurrency(precioUnitarioCompra);
+        }
+
+        if (precioVentaEl) {
+            const precioUnitarioVenta = venta.precio_unitario ? parseFloat(venta.precio_unitario) : 0;
+            precioVentaEl.textContent = this.formatCurrency(precioUnitarioVenta);
+        }
+
+        // Renderizar listas de costes
+        this.renderVentaCostList('venta-compra-costs-list', compraCosts || [], 'compra');
+        this.renderVentaCostList('venta-venta-costs-list', ventaCosts || [], 'venta');
+    },
+
+    renderVentaCostList(containerId, costs, role) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+            console.error(`Container ${containerId} not found`);
+            return;
+        }
+
+        container.innerHTML = '';
+
+        if (!costs || costs.length === 0) {
+            container.innerHTML = '<div class="text-sm text-gray-500 italic">No hay costes añadidos</div>';
+            return;
+        }
+
+        costs.forEach((cost, index) => {
+            const costDiv = document.createElement('div');
+            costDiv.className = 'border rounded-lg p-4 bg-gray-50 border-gray-200';
+
+            const safeName = this.escapeHtml(cost.name || '');
+            const safeValue = cost.value !== undefined && cost.value !== null ? parseFloat(cost.value) : '';
+
+            costDiv.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <div class="md:col-span-6">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Nombre</label>
+                        <input type="text" data-venta-cost-role="${role}" data-venta-cost-index="${index}" data-venta-cost-field="name" value="${safeName}" placeholder="Ej: Envío" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div class="md:col-span-4">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Valor (€)</label>
+                        <input type="number" data-venta-cost-role="${role}" data-venta-cost-index="${index}" data-venta-cost-field="value" value="${safeValue === '' ? '' : safeValue}" step="0.01" min="0" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div class="md:col-span-2 flex items-end">
+                        <button type="button" class="w-full px-3 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100" data-venta-cost-role="${role}" data-venta-cost-index="${index}" data-venta-cost-action="remove">
+                            Eliminar
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(costDiv);
+
+            // Eventos
+            const nameInput = costDiv.querySelector('input[data-venta-cost-field="name"]');
+            const valueInput = costDiv.querySelector('input[data-venta-cost-field="value"]');
+            const removeBtn = costDiv.querySelector('button[data-venta-cost-action="remove"]');
+
+            if (nameInput) {
+                nameInput.addEventListener('input', () => {
+                    app.updateVentaCostField(role, index, 'name', nameInput.value);
+                });
+            }
+
+            if (valueInput) {
+                const handler = () => {
+                    app.updateVentaCostField(role, index, 'value', valueInput.value);
+                };
+                valueInput.addEventListener('input', handler);
+                valueInput.addEventListener('change', handler);
+            }
+
+            if (removeBtn) {
+                removeBtn.addEventListener('click', () => {
+                    app.removeVentaCost(role, index);
+                });
+            }
         });
     }
 };

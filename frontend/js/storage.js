@@ -467,6 +467,50 @@ const comprasStorage = {
             console.error('Error fetching compras:', error);
             return [];
         }
+    },
+
+    async update(id, updates) {
+        try {
+            if (!id || typeof id !== 'string') {
+                throw new Error('Valid compra ID is required');
+            }
+
+            const payload = {};
+
+            if (updates.precio_unitario !== undefined) {
+                payload.precio_unitario = parseFloat(updates.precio_unitario);
+            }
+
+            if (updates.unidades !== undefined) {
+                payload.unidades = parseInt(updates.unidades);
+            }
+
+            if (updates.costes_compra !== undefined) {
+                payload.costes_compra = Array.isArray(updates.costes_compra) ? updates.costes_compra : [];
+            }
+
+            if (updates.fecha_compra !== undefined) {
+                payload.fecha_compra = updates.fecha_compra;
+            }
+
+            const response = await fetch(`${this.apiBaseUrl}/compras/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error updating compra:', error);
+            throw error;
+        }
     }
 };
 
@@ -598,6 +642,74 @@ const ventasStorage = {
         } catch (error) {
             console.error('Error fetching ventas:', error);
             return [];
+        }
+    },
+
+    async getById(id) {
+        try {
+            if (!id || typeof id !== 'string') {
+                throw new Error('Valid venta ID is required');
+            }
+
+            const response = await fetch(`${this.apiBaseUrl}/ventas/${id}`);
+
+            if (!response.ok) {
+                if (response.status === 404) {
+                    return null;
+                }
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+            }
+
+            // La API devuelve { venta, compra, stock, canal_origen, canal_destino }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching venta detail:', error);
+            throw error;
+        }
+    },
+
+    async update(id, updates) {
+        try {
+            if (!id || typeof id !== 'string') {
+                throw new Error('Valid venta ID is required');
+            }
+
+            const payload = {};
+
+            if (updates.precio_unitario !== undefined) {
+                payload.precio_unitario = parseFloat(updates.precio_unitario);
+            }
+
+            if (updates.unidades !== undefined) {
+                payload.unidades = parseInt(updates.unidades);
+            }
+
+            if (updates.costes_venta !== undefined) {
+                payload.costes_venta = Array.isArray(updates.costes_venta) ? updates.costes_venta : [];
+            }
+
+            if (updates.fecha_venta !== undefined) {
+                payload.fecha_venta = updates.fecha_venta;
+            }
+
+            const response = await fetch(`${this.apiBaseUrl}/ventas/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error updating venta:', error);
+            throw error;
         }
     }
 };

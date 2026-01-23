@@ -828,6 +828,103 @@ app.get('/compras', async (req, res) => {
   }
 });
 
+// Actualizar una compra (costes_compra, precio_unitario, unidades) y recalcular total_compra y coste_unitario_real en stock
+app.put('/compras/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid compra ID' });
+    }
+
+    const updates = req.body || {};
+
+    const { data: currentCompra, error: currentError } = await supabase
+      .from('compras')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (currentError) {
+      if (currentError.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Compra not found' });
+      }
+      console.error('Supabase error (current compra):', currentError);
+      return res.status(500).json({ error: 'Database error', details: currentError.message });
+    }
+
+    if (!currentCompra) {
+      return res.status(404).json({ error: 'Compra not found' });
+    }
+
+    const precioUnitario = updates.precio_unitario !== undefined && updates.precio_unitario !== null
+      ? parseFloat(updates.precio_unitario)
+      : parseFloat(currentCompra.precio_unitario);
+
+    const unidades = updates.unidades !== undefined && updates.unidades !== null
+      ? parseInt(updates.unidades)
+      : parseInt(currentCompra.unidades);
+
+    const costesCompraArray = updates.costes_compra !== undefined
+      ? (Array.isArray(updates.costes_compra) ? updates.costes_compra : [])
+      : (Array.isArray(currentCompra.costes_compra) ? currentCompra.costes_compra : []);
+
+    if (isNaN(precioUnitario) || precioUnitario < 0) {
+      return res.status(400).json({ error: 'Valid precio_unitario is required (>= 0)' });
+    }
+
+    if (!unidades || isNaN(unidades) || unidades <= 0) {
+      return res.status(400).json({ error: 'Valid unidades is required (> 0)' });
+    }
+
+    const totalCostes = costesCompraArray.reduce((sum, coste) => {
+      return sum + (parseFloat(coste.value) || 0);
+    }, 0);
+
+    const totalCompra = (precioUnitario * unidades) + totalCostes;
+    const costeUnitarioReal = unidades > 0 ? totalCompra / unidades : 0;
+
+    const payload = {
+      precio_unitario: precioUnitario,
+      unidades,
+      costes_compra: costesCompraArray,
+      total_compra: totalCompra
+    };
+
+    if (updates.fecha_compra) {
+      payload.fecha_compra = updates.fecha_compra;
+    }
+
+    const { data: updatedCompra, error: updateError } = await supabase
+      .from('compras')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (updateError) {
+      console.error('Supabase error (update compra):', updateError);
+      return res.status(500).json({ error: 'Database error', details: updateError.message });
+    }
+
+    // Actualizar el coste unitario real del stock asociado
+    const { error: stockUpdateError } = await supabase
+      .from('stock')
+      .update({ coste_unitario_real: costeUnitarioReal })
+      .eq('compra_id', id);
+
+    if (stockUpdateError) {
+      console.error('Supabase error (update stock from compra):', stockUpdateError);
+      // No devolvemos error duro, pero lo registramos
+    }
+
+    return res.json(updatedCompra);
+  } catch (error) {
+    console.error('Unexpected error (update compra):', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
 // ============================================
 // STOCK ENDPOINTS (Nuevo modelo)
 // ============================================
@@ -1068,6 +1165,200 @@ app.post('/ventas', async (req, res) => {
     res.status(201).json(venta);
   } catch (error) {
     console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Obtener detalle de una venta concreta (incluye compra, stock y canales)
+app.get('/ventas/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid venta ID' });
+    }
+
+    const { data: venta, error: ventaError } = await supabase
+      .from('ventas')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (ventaError) {
+      if (ventaError.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Venta not found' });
+      }
+      console.error('Supabase error (venta):', ventaError);
+      return res.status(500).json({ error: 'Database error', details: ventaError.message });
+    }
+
+    if (!venta) {
+      return res.status(404).json({ error: 'Venta not found' });
+    }
+
+    // Obtener stock asociado
+    let stock = null;
+    let compra = null;
+    let canalOrigen = null;
+    let canalDestino = null;
+
+    if (venta.stock_id) {
+      const { data: stockItem, error: stockError } = await supabase
+        .from('stock')
+        .select('*')
+        .eq('id', venta.stock_id)
+        .single();
+
+      if (stockError && stockError.code !== 'PGRST116') {
+        console.error('Supabase error (stock):', stockError);
+        return res.status(500).json({ error: 'Database error', details: stockError.message });
+      }
+
+      if (stockItem) {
+        stock = stockItem;
+
+        // Obtener compra asociada al stock
+        if (stockItem.compra_id) {
+          const { data: compraData, error: compraError } = await supabase
+            .from('compras')
+            .select('*')
+            .eq('id', stockItem.compra_id)
+            .single();
+
+          if (compraError && compraError.code !== 'PGRST116') {
+            console.error('Supabase error (compra):', compraError);
+            return res.status(500).json({ error: 'Database error', details: compraError.message });
+          }
+
+          if (compraData) {
+            compra = compraData;
+
+            // Canal origen
+            if (compraData.canal_origen_id) {
+              const { data: canalOrigenData } = await supabase
+                .from('channels')
+                .select('id, name')
+                .eq('id', compraData.canal_origen_id)
+                .single();
+
+              if (canalOrigenData) {
+                canalOrigen = canalOrigenData;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Canal destino de la venta
+    if (venta.canal_destino_id) {
+      const { data: canalDestinoData } = await supabase
+        .from('channels')
+        .select('id, name')
+        .eq('id', venta.canal_destino_id)
+        .single();
+
+      if (canalDestinoData) {
+        canalDestino = canalDestinoData;
+      }
+    }
+
+    return res.json({
+      venta,
+      stock,
+      compra,
+      canal_origen: canalOrigen,
+      canal_destino: canalDestino
+    });
+  } catch (error) {
+    console.error('Unexpected error (get venta detail):', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Actualizar una venta (incluye recálculo de total_venta a partir de precio, unidades y costes_venta)
+app.put('/ventas/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid venta ID' });
+    }
+
+    const updates = req.body || {};
+
+    // Obtener venta actual para completar datos que no se envían
+    const { data: currentVenta, error: currentError } = await supabase
+      .from('ventas')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (currentError) {
+      if (currentError.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Venta not found' });
+      }
+      console.error('Supabase error (current venta):', currentError);
+      return res.status(500).json({ error: 'Database error', details: currentError.message });
+    }
+
+    if (!currentVenta) {
+      return res.status(404).json({ error: 'Venta not found' });
+    }
+
+    const precioUnitario = updates.precio_unitario !== undefined && updates.precio_unitario !== null
+      ? parseFloat(updates.precio_unitario)
+      : parseFloat(currentVenta.precio_unitario);
+
+    const unidades = updates.unidades !== undefined && updates.unidades !== null
+      ? parseInt(updates.unidades)
+      : parseInt(currentVenta.unidades);
+
+    const costesVentaArray = updates.costes_venta !== undefined
+      ? (Array.isArray(updates.costes_venta) ? updates.costes_venta : [])
+      : (Array.isArray(currentVenta.costes_venta) ? currentVenta.costes_venta : []);
+
+    if (isNaN(precioUnitario) || precioUnitario < 0) {
+      return res.status(400).json({ error: 'Valid precio_unitario is required (>= 0)' });
+    }
+
+    if (!unidades || isNaN(unidades) || unidades <= 0) {
+      return res.status(400).json({ error: 'Valid unidades is required (> 0)' });
+    }
+
+    const totalCostes = costesVentaArray.reduce((sum, coste) => {
+      return sum + (parseFloat(coste.value) || 0);
+    }, 0);
+
+    const totalVenta = (precioUnitario * unidades) - totalCostes;
+
+    const payload = {
+      // Solo permitimos actualizar unos pocos campos desde aquí por simplicidad
+      precio_unitario: precioUnitario,
+      unidades,
+      costes_venta: costesVentaArray,
+      total_venta: totalVenta
+    };
+
+    if (updates.fecha_venta) {
+      payload.fecha_venta = updates.fecha_venta;
+    }
+
+    const { data: updatedVenta, error: updateError } = await supabase
+      .from('ventas')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (updateError) {
+      console.error('Supabase error (update venta):', updateError);
+      return res.status(500).json({ error: 'Database error', details: updateError.message });
+    }
+
+    return res.json(updatedVenta);
+  } catch (error) {
+    console.error('Unexpected error (update venta):', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });

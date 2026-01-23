@@ -545,11 +545,118 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Unitario</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Venta</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Margen</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="ventas-table" class="bg-white divide-y divide-gray-200">
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detalle de Venta -->
+        <div data-view="venta-detail" class="w-full">
+            <div class="bg-white shadow rounded-lg">
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-6">
+                        <h2 class="text-2xl font-bold text-gray-900" id="venta-detail-product-name">-</h2>
+                        <button onclick="app.showView('ventas')" class="text-gray-400 hover:text-gray-500">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500 mb-2">Origen</h3>
+                            <p class="text-sm text-gray-500">Canal</p>
+                            <p class="text-lg font-semibold text-gray-900" id="venta-detail-origin-channel">-</p>
+                            <p class="text-sm text-gray-500 mt-2">Fecha Compra</p>
+                            <p class="text-sm text-gray-900" id="venta-detail-fecha-compra">-</p>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500 mb-2">Destino</h3>
+                            <p class="text-sm text-gray-500">Canal</p>
+                            <p class="text-lg font-semibold text-gray-900" id="venta-detail-dest-channel">-</p>
+                            <p class="text-sm text-gray-500 mt-2">Fecha Venta</p>
+                            <p class="text-sm text-gray-900" id="venta-detail-fecha-venta">-</p>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500 mb-2">Resumen</h3>
+                            <p class="text-sm text-gray-500">Unidades Vendidas</p>
+                            <p class="text-lg font-semibold text-gray-900" id="venta-detail-unidades">0</p>
+                            <p class="text-sm text-gray-500 mt-2">Precio Compra Unitario</p>
+                            <p class="text-sm text-gray-900" id="venta-detail-precio-compra">€0.00</p>
+                            <p class="text-sm text-gray-500 mt-2">Precio Venta Unitario</p>
+                            <p class="text-sm text-gray-900" id="venta-detail-precio-venta">€0.00</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="text-sm font-medium text-gray-700">Costes de Compra (asignados a esta venta)</h3>
+                                <button type="button" onclick="app.addVentaCost('compra')" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+                                    + Añadir Coste
+                                </button>
+                            </div>
+                            <div id="venta-compra-costs-list" class="space-y-3">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="text-sm font-medium text-gray-700">Costes de Venta</h3>
+                                <button type="button" onclick="app.addVentaCost('venta')" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+                                    + Añadir Coste
+                                </button>
+                            </div>
+                            <div id="venta-venta-costs-list" class="space-y-3">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-6 bg-gray-50 p-4 rounded-lg">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">Métricas de la Venta</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div>
+                                <p class="text-gray-500">Coste Total Asignado a la Venta</p>
+                                <p class="text-lg font-semibold text-gray-900" id="venta-detail-total-compra">€0.00</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">Ingresos Brutos</p>
+                                <p class="text-lg font-semibold text-gray-900" id="venta-detail-total-venta-bruta">€0.00</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">Costes de Venta</p>
+                                <p class="text-lg font-semibold text-gray-900" id="venta-detail-total-costes-venta">€0.00</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mt-4">
+                            <div>
+                                <p class="text-gray-500">Coste de Compra Proporcional</p>
+                                <p class="text-lg font-semibold text-gray-900" id="venta-detail-total-costes-compra">€0.00</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">Margen Neto</p>
+                                <p class="text-lg font-semibold text-green-600" id="venta-detail-margin-neto">€0.00</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">Rentabilidad</p>
+                                <p class="text-lg font-semibold text-green-600" id="venta-detail-rentabilidad">0%</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end space-x-3">
+                        <button onclick="app.showView('ventas')" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                            Volver
+                        </button>
+                        <button onclick="app.saveVentaDetail()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                            Guardar Cambios
+                        </button>
                     </div>
                 </div>
             </div>
