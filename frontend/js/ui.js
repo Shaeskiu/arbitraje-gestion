@@ -390,39 +390,55 @@ const ui = {
     renderDetail(opportunity) {
         const calc = arbitrage.calculate(opportunity);
         
-        document.getElementById('detail-product-name').textContent = opportunity.productName;
-        document.getElementById('detail-origin-channel').textContent = opportunity.originChannel;
-        document.getElementById('detail-origin-price').textContent = `Compra: ${arbitrage.formatCurrency(opportunity.originPrice)}`;
-        document.getElementById('detail-dest-channel').textContent = opportunity.destChannel;
-        document.getElementById('detail-dest-price').textContent = `Venta Estimada: ${arbitrage.formatCurrency(opportunity.destPrice)}`;
-        
-        // Renderizar enlaces
-        const offerLinkContainer = document.getElementById('detail-offer-link-container');
-        if (offerLinkContainer) {
-            if (opportunity.offerLink && opportunity.offerLink.trim()) {
-                offerLinkContainer.innerHTML = `<a href="${this.escapeHtml(opportunity.offerLink)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 underline break-all">${this.escapeHtml(opportunity.offerLink)}</a>`;
-            } else {
-                offerLinkContainer.innerHTML = '<span class="text-gray-500">No disponible</span>';
-            }
+        // Poblar campos editables
+        const productNameInput = document.getElementById('detail-product-name');
+        if (productNameInput) {
+            productNameInput.value = opportunity.productName || '';
         }
         
-        const marketPriceLinkContainer = document.getElementById('detail-market-price-link-container');
-        if (marketPriceLinkContainer) {
-            if (opportunity.marketPriceLink && opportunity.marketPriceLink.trim()) {
-                marketPriceLinkContainer.innerHTML = `<a href="${this.escapeHtml(opportunity.marketPriceLink)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 underline break-all">${this.escapeHtml(opportunity.marketPriceLink)}</a>`;
-            } else {
-                marketPriceLinkContainer.innerHTML = '<span class="text-gray-500">No disponible</span>';
-            }
+        // Poblar selects de canales (se poblarán después de cargar los canales)
+        const originChannelSelect = document.getElementById('detail-origin-channel-select');
+        const destChannelSelect = document.getElementById('detail-dest-channel-select');
+        const originChannelIdInput = document.getElementById('detail-origin-channel-id');
+        const destChannelIdInput = document.getElementById('detail-dest-channel-id');
+        
+        if (originChannelSelect && originChannelIdInput) {
+            const originChannelId = opportunity.originChannelId || opportunity.canalOrigenId || '';
+            originChannelSelect.value = originChannelId;
+            originChannelIdInput.value = originChannelId;
         }
         
-        document.getElementById('detail-margin-bruto').textContent = arbitrage.formatCurrency(calc.estimated.grossMargin);
-        document.getElementById('detail-costes-totales').textContent = arbitrage.formatCurrency(calc.estimated.totalCosts);
-        document.getElementById('detail-margin-neto').textContent = arbitrage.formatCurrency(calc.estimated.netMargin);
-        document.getElementById('detail-rentabilidad').textContent = arbitrage.formatPercent(calc.estimated.profitability);
+        if (destChannelSelect && destChannelIdInput) {
+            const destChannelId = opportunity.destChannelId || opportunity.canalDestinoId || '';
+            destChannelSelect.value = destChannelId;
+            destChannelIdInput.value = destChannelId;
+        }
         
-        document.getElementById('detail-status').value = opportunity.status;
+        // Poblar precios
+        const originPriceInput = document.getElementById('detail-origin-price');
+        const destPriceInput = document.getElementById('detail-dest-price');
+        if (originPriceInput) {
+            originPriceInput.value = opportunity.originPrice || opportunity.precioEstimadoCompra || '';
+        }
+        if (destPriceInput) {
+            destPriceInput.value = opportunity.destPrice || opportunity.precioEstimadoVenta || '';
+        }
+        
+        // Poblar enlaces
+        const offerLinkInput = document.getElementById('detail-offer-link');
+        const marketPriceLinkInput = document.getElementById('detail-market-price-link');
+        if (offerLinkInput) {
+            offerLinkInput.value = opportunity.offerLink || '';
+        }
+        if (marketPriceLinkInput) {
+            marketPriceLinkInput.value = opportunity.marketPriceLink || '';
+        }
+        
+        // Poblar estado y notas
+        document.getElementById('detail-status').value = opportunity.status || 'detectada';
         document.getElementById('detail-notes').value = opportunity.notes || '';
         
+        // Poblar costes
         app.detailCosts = opportunity.costs ? JSON.parse(JSON.stringify(opportunity.costs)) : [];
         if (opportunity.additionalCosts && (!opportunity.costs || opportunity.costs.length === 0)) {
             app.detailCosts = [{
@@ -434,6 +450,12 @@ const ui = {
         
         this.renderCostsList('detail-costs-list');
         this.updateCostsBreakdown('detail-costs-breakdown-content', 'detail-costs-total', calc.estimated.costsBreakdown);
+        
+        // Actualizar métricas
+        document.getElementById('detail-margin-bruto').textContent = arbitrage.formatCurrency(calc.estimated.grossMargin);
+        document.getElementById('detail-costes-totales').textContent = arbitrage.formatCurrency(calc.estimated.totalCosts);
+        document.getElementById('detail-margin-neto').textContent = arbitrage.formatCurrency(calc.estimated.netMargin);
+        document.getElementById('detail-rentabilidad').textContent = arbitrage.formatPercent(calc.estimated.profitability);
         
         const netMarginEl = document.getElementById('detail-margin-neto');
         netMarginEl.className = netMarginEl.className.replace(/text-\w+-\d+/, '');
@@ -656,6 +678,28 @@ const ui = {
         
         if (!originSelect || !destSelect) {
             console.warn('Channel selectors not found in DOM');
+            return;
+        }
+        
+        if (!channels || channels.length === 0) {
+            originSelect.innerHTML = '<option value="">Selecciona un canal</option>';
+            destSelect.innerHTML = '<option value="">Selecciona un canal</option>';
+            return;
+        }
+        
+        const options = '<option value="">Selecciona un canal</option>' + 
+            channels.map(ch => `<option value="${ch.id}">${this.escapeHtml(ch.name)}</option>`).join('');
+        
+        originSelect.innerHTML = options;
+        destSelect.innerHTML = options;
+    },
+    
+    populateDetailChannelSelects(channels) {
+        const originSelect = document.getElementById('detail-origin-channel-select');
+        const destSelect = document.getElementById('detail-dest-channel-select');
+        
+        if (!originSelect || !destSelect) {
+            console.warn('Detail channel selectors not found in DOM');
             return;
         }
         

@@ -317,7 +317,10 @@
             <div class="bg-white shadow rounded-lg">
                 <div class="p-6">
                     <div class="flex justify-between items-start mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900" id="detail-product-name">-</h2>
+                        <div class="flex-1 mr-4">
+                            <label for="detail-product-name" class="block text-sm font-medium text-gray-700 mb-2">Nombre del Producto</label>
+                            <input type="text" id="detail-product-name" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-2xl font-bold text-gray-900" placeholder="Nombre del producto">
+                        </div>
                         <button onclick="app.showView('dashboard')" class="text-gray-400 hover:text-gray-500">
                             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -327,14 +330,22 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div>
-                            <h3 class="text-sm font-medium text-gray-500 mb-2">Canal Origen</h3>
-                            <p class="text-lg font-semibold text-gray-900" id="detail-origin-channel">-</p>
-                            <p class="text-sm text-gray-600" id="detail-origin-price">-</p>
+                            <label for="detail-origin-channel-select" class="block text-sm font-medium text-gray-700 mb-2">Canal Origen</label>
+                            <select id="detail-origin-channel-select" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <option value="">Selecciona un canal</option>
+                            </select>
+                            <input type="hidden" id="detail-origin-channel-id">
+                            <label for="detail-origin-price" class="block text-sm font-medium text-gray-700 mb-2 mt-3">Precio de Compra</label>
+                            <input type="number" id="detail-origin-price" step="0.01" min="0" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="0.00">
                         </div>
                         <div>
-                            <h3 class="text-sm font-medium text-gray-500 mb-2">Canal Destino</h3>
-                            <p class="text-lg font-semibold text-gray-900" id="detail-dest-channel">-</p>
-                            <p class="text-sm text-gray-600" id="detail-dest-price">-</p>
+                            <label for="detail-dest-channel-select" class="block text-sm font-medium text-gray-700 mb-2">Canal Destino</label>
+                            <select id="detail-dest-channel-select" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <option value="">Selecciona un canal</option>
+                            </select>
+                            <input type="hidden" id="detail-dest-channel-id">
+                            <label for="detail-dest-price" class="block text-sm font-medium text-gray-700 mb-2 mt-3">Precio de Venta Estimado</label>
+                            <input type="number" id="detail-dest-price" step="0.01" min="0" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="0.00">
                         </div>
                     </div>
 
@@ -342,16 +353,12 @@
                         <h3 class="text-sm font-medium text-gray-700 mb-3">Enlaces</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1">Enlace de la Oferta</label>
-                                <div id="detail-offer-link-container" class="text-sm">
-                                    <span class="text-gray-500">No disponible</span>
-                                </div>
+                                <label for="detail-offer-link" class="block text-sm font-medium text-gray-700 mb-2">Enlace de la Oferta</label>
+                                <input type="url" id="detail-offer-link" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="https://...">
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1">Enlace de Precios de Mercado</label>
-                                <div id="detail-market-price-link-container" class="text-sm">
-                                    <span class="text-gray-500">No disponible</span>
-                                </div>
+                                <label for="detail-market-price-link" class="block text-sm font-medium text-gray-700 mb-2">Enlace de Precios de Mercado</label>
+                                <input type="url" id="detail-market-price-link" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="https://...">
                             </div>
                         </div>
                     </div>

@@ -885,24 +885,79 @@ const app = {
     },
     
     setupDetailForm() {
-        // Ya no hay campos que necesiten setup especial en el detalle
+        // Añadir event listeners para recalcular métricas en tiempo real
+        const originPriceInput = document.getElementById('detail-origin-price');
+        const destPriceInput = document.getElementById('detail-dest-price');
+        const originChannelSelect = document.getElementById('detail-origin-channel-select');
+        const destChannelSelect = document.getElementById('detail-dest-channel-select');
+        
+        // Remover listeners anteriores si existen
+        if (this.detailOriginPriceListener) {
+            originPriceInput?.removeEventListener('input', this.detailOriginPriceListener);
+        }
+        if (this.detailDestPriceListener) {
+            destPriceInput?.removeEventListener('input', this.detailDestPriceListener);
+        }
+        if (this.detailOriginChannelListener) {
+            originChannelSelect?.removeEventListener('change', this.detailOriginChannelListener);
+        }
+        if (this.detailDestChannelListener) {
+            destChannelSelect?.removeEventListener('change', this.detailDestChannelListener);
+        }
+        
+        // Crear nuevos listeners
+        this.detailOriginPriceListener = () => {
+            this.updateDetailCalculations();
+        };
+        this.detailDestPriceListener = () => {
+            this.updateDetailCalculations();
+        };
+        this.detailOriginChannelListener = () => {
+            const select = document.getElementById('detail-origin-channel-select');
+            const hiddenInput = document.getElementById('detail-origin-channel-id');
+            if (select && hiddenInput) {
+                hiddenInput.value = select.value;
+            }
+            this.updateDetailCalculations();
+        };
+        this.detailDestChannelListener = () => {
+            const select = document.getElementById('detail-dest-channel-select');
+            const hiddenInput = document.getElementById('detail-dest-channel-id');
+            if (select && hiddenInput) {
+                hiddenInput.value = select.value;
+            }
+            this.updateDetailCalculations();
+        };
+        
+        // Añadir listeners
+        originPriceInput?.addEventListener('input', this.detailOriginPriceListener);
+        destPriceInput?.addEventListener('input', this.detailDestPriceListener);
+        originChannelSelect?.addEventListener('change', this.detailOriginChannelListener);
+        destChannelSelect?.addEventListener('change', this.detailDestChannelListener);
     },
     
     async updateDetailCalculations() {
         if (!this.currentOpportunityId) return;
         
-        const opportunity = await storage.getById(this.currentOpportunityId);
-        if (!opportunity) return;
+        // Leer valores de los inputs en lugar de solo de la oportunidad
+        const originPriceInput = document.getElementById('detail-origin-price');
+        const destPriceInput = document.getElementById('detail-dest-price');
+        
+        const originPrice = originPriceInput ? parseFloat(originPriceInput.value) || 0 : 0;
+        const destPrice = destPriceInput ? parseFloat(destPriceInput.value) || 0 : 0;
         
         const tempOpportunity = {
-            originPrice: opportunity.originPrice,
-            destPrice: opportunity.destPrice,
+            originPrice: originPrice,
+            destPrice: destPrice,
             costs: this.detailCosts || []
         };
         
         const calc = arbitrage.calculate(tempOpportunity);
         ui.updateCostsBreakdown('detail-costs-breakdown-content', 'detail-costs-total', calc.estimated.costsBreakdown);
         
+        // Actualizar margen bruto
+        const grossMargin = destPrice - originPrice;
+        document.getElementById('detail-margin-bruto').textContent = arbitrage.formatCurrency(grossMargin);
         document.getElementById('detail-costes-totales').textContent = arbitrage.formatCurrency(calc.estimated.totalCosts);
         document.getElementById('detail-margin-neto').textContent = arbitrage.formatCurrency(calc.estimated.netMargin);
         document.getElementById('detail-rentabilidad').textContent = arbitrage.formatPercent(calc.estimated.profitability);
@@ -915,6 +970,7 @@ const app = {
         rentEl.className = rentEl.className.replace(/text-\w+-\d+/, '');
         rentEl.classList.add(calc.estimated.profitability >= 0 ? 'text-purple-600' : 'text-red-600');
         
+        // Las métricas reales solo se muestran si hay datos reales guardados
         const realSection = document.getElementById('detail-real-section');
         if (calc.real) {
             realSection.style.display = 'block';
@@ -955,16 +1011,40 @@ const app = {
     
     async showDetail(id) {
         try {
-            const opportunity = await storage.getById(id);
-            if (opportunity) {
-                this.currentOpportunityId = id;
-                ui.renderDetail(opportunity);
-                this.setupDetailForm();
-                this.showView('detail');
+            // Cargar canales antes de mostrar el detalle
+            if (!this.allChannels || this.allChannels.length === 0) {
+                await this.loadChannels();
             }
+            
+            const opportunity = await storage.getById(id);
+            if (!opportunity) {
+                alert('No se pudo cargar la oportunidad. Puede que no exista o haya un error de conexión.');
+                return;
+            }
+            
+            this.currentOpportunityId = id;
+            
+            // Cambiar a la vista primero para que los elementos del DOM existan
+            this.showView('detail');
+            
+            // Esperar un momento para que el DOM se renderice
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            // Poblar selects de canales en el detalle
+            if (this.allChannels && this.allChannels.length > 0) {
+                ui.populateDetailChannelSelects(this.allChannels);
+            }
+            
+            ui.renderDetail(opportunity);
+            this.setupDetailForm();
         } catch (error) {
             console.error('Error loading opportunity:', error);
-            alert('Error al cargar la oportunidad.');
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                id: id
+            });
+            alert(`Error al cargar la oportunidad: ${error.message || 'Error desconocido'}`);
         }
     },
     
@@ -972,28 +1052,84 @@ const app = {
         if (!this.currentOpportunityId) return;
         
         try {
-            const opportunity = await storage.getById(this.currentOpportunityId);
-            if (!opportunity) {
-                alert('No se pudo cargar la oportunidad. Por favor, inténtalo de nuevo.');
-                return;
-            }
-            
+            // Leer todos los campos editables
+            const productNameInput = document.getElementById('detail-product-name');
+            const originChannelSelect = document.getElementById('detail-origin-channel-select');
+            const originChannelIdInput = document.getElementById('detail-origin-channel-id');
+            const originPriceInput = document.getElementById('detail-origin-price');
+            const destChannelSelect = document.getElementById('detail-dest-channel-select');
+            const destChannelIdInput = document.getElementById('detail-dest-channel-id');
+            const destPriceInput = document.getElementById('detail-dest-price');
+            const offerLinkInput = document.getElementById('detail-offer-link');
+            const marketPriceLinkInput = document.getElementById('detail-market-price-link');
             const statusInput = document.getElementById('detail-status');
             const notesInput = document.getElementById('detail-notes');
             
+            // Validar campos obligatorios
+            const productName = productNameInput ? productNameInput.value.trim() : '';
+            const originPrice = originPriceInput ? parseFloat(originPriceInput.value) : 0;
+            const destPrice = destPriceInput ? parseFloat(destPriceInput.value) : 0;
+            
+            if (!productName) {
+                alert('El nombre del producto es obligatorio');
+                return;
+            }
+            
+            if (isNaN(originPrice) || originPrice < 0) {
+                alert('El precio de compra debe ser un número válido mayor o igual a 0');
+                return;
+            }
+            
+            if (isNaN(destPrice) || destPrice < 0) {
+                alert('El precio de venta estimado debe ser un número válido mayor o igual a 0');
+                return;
+            }
+            
+            // Obtener nombres de canales si están seleccionados
+            let originChannel = '';
+            let destChannel = '';
+            const originChannelId = originChannelSelect ? originChannelSelect.value : '';
+            const destChannelId = destChannelSelect ? destChannelSelect.value : '';
+            
+            if (originChannelId && this.allChannels && this.allChannels.length > 0) {
+                const originChannelObj = this.allChannels.find(c => c.id === originChannelId);
+                if (originChannelObj) {
+                    originChannel = originChannelObj.name;
+                }
+            }
+            
+            if (destChannelId && this.allChannels && this.allChannels.length > 0) {
+                const destChannelObj = this.allChannels.find(c => c.id === destChannelId);
+                if (destChannelObj) {
+                    destChannel = destChannelObj.name;
+                }
+            }
+            
+            // Preparar actualizaciones
             const updates = {
-                productName: opportunity.productName,
-                originChannel: opportunity.originChannel,
-                originChannelId: opportunity.originChannelId,
-                originPrice: opportunity.originPrice,
-                destChannel: opportunity.destChannel,
-                destChannelId: opportunity.destChannelId,
-                destPrice: opportunity.destPrice,
-                offerLink: opportunity.offerLink || null,
-                marketPriceLink: opportunity.marketPriceLink || null,
-                status: statusInput ? statusInput.value : opportunity.status,
-                costs: this.detailCosts && this.detailCosts.length > 0 ? this.detailCosts.filter(cost => cost.name && (cost.value || cost.value === 0)) : opportunity.costs,
-                notes: notesInput ? notesInput.value : opportunity.notes
+                productName: productName,
+                originChannel: originChannel,
+                originChannelId: originChannelId || null,
+                originPrice: originPrice,
+                destChannel: destChannel,
+                destChannelId: destChannelId || null,
+                destPrice: destPrice,
+                offerLink: offerLinkInput ? offerLinkInput.value.trim() || null : null,
+                marketPriceLink: marketPriceLinkInput ? marketPriceLinkInput.value.trim() || null : null,
+                status: statusInput ? statusInput.value : 'detectada',
+                costs: this.detailCosts && this.detailCosts.length > 0 
+                    ? this.detailCosts.filter(cost => cost.name && cost.name.trim().length > 0 && (cost.value || cost.value === 0)).map(cost => {
+                        const cleanCost = {
+                            name: cost.name.trim(),
+                            type: cost.type,
+                            value: parseFloat(cost.value) || 0,
+                            source: cost.source || 'manual'
+                        };
+                        if (cost.base) cleanCost.base = cost.base;
+                        return cleanCost;
+                    })
+                    : [],
+                notes: notesInput ? notesInput.value.trim() : ''
             };
             
             await storage.update(this.currentOpportunityId, updates);
@@ -1001,7 +1137,9 @@ const app = {
             this.refreshOpportunities();
         } catch (error) {
             console.error('Error saving detail:', error);
-            alert('Error al guardar los cambios. Por favor, inténtalo de nuevo.');
+            const errorMessage = error.message || 'Error desconocido';
+            const errorDetails = error.details || error.hint || '';
+            alert(`Error al guardar los cambios: ${errorMessage}${errorDetails ? '\n' + errorDetails : ''}`);
         }
     },
     

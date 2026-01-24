@@ -16,5 +16,6 @@ services:
 
   frontend:
     volumes:
-      - ./frontend:/usr/share/nginx/html:ro
+      - ./frontend:/usr/share/nginx/html
     # En desarrollo, los cambios se reflejan inmediatamente al montar el volumen
+    # Nota: Sin :ro para permitir que el entrypoint escriba config.js
