@@ -9,6 +9,7 @@ const app = {
     channelOriginCosts: [],
     channelDestCosts: [],
     allChannels: [],
+    allLocalizaciones: [],
     salesChartInstance: null,
     marginsChartInstance: null,
     
@@ -29,6 +30,16 @@ const app = {
             return this.allChannels;
         } catch (error) {
             console.error('Error loading channels:', error);
+            return [];
+        }
+    },
+    
+    async loadLocalizaciones() {
+        try {
+            this.allLocalizaciones = await localizacionesStorage.getAll();
+            return this.allLocalizaciones;
+        } catch (error) {
+            console.error('Error loading localizaciones:', error);
             return [];
         }
     },
@@ -56,6 +67,14 @@ const app = {
             channelForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 this.saveChannel();
+            });
+        }
+        
+        const localizacionForm = document.getElementById('localizacion-form');
+        if (localizacionForm) {
+            localizacionForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.saveLocalizacion();
             });
         }
         
@@ -181,6 +200,8 @@ const app = {
             this.refreshVentas();
         } else if (viewName === 'channels') {
             this.refreshChannels();
+        } else if (viewName === 'localizaciones') {
+            this.refreshLocalizaciones();
         } else if (viewName === 'new') {
             this.initializeOpportunityForm();
         } else if (viewName === 'channel-form') {
@@ -353,6 +374,115 @@ const app = {
         } catch (error) {
             console.error('Error saving channel:', error);
             alert('Error al guardar el canal: ' + (error.message || 'Error desconocido'));
+        }
+    },
+    
+    // ============================================
+    // GESTIÓN DE LOCALIZACIONES
+    // ============================================
+    
+    async refreshLocalizaciones() {
+        try {
+            const localizaciones = await localizacionesStorage.getAll();
+            this.allLocalizaciones = localizaciones;
+            ui.renderLocalizaciones(localizaciones);
+        } catch (error) {
+            console.error('Error refreshing localizaciones:', error);
+            alert('Error al cargar las localizaciones.');
+        }
+    },
+    
+    showLocalizacionForm() {
+        const form = document.getElementById('localizacion-form');
+        if (form) {
+            form.reset();
+        }
+        const localizacionIdInput = document.getElementById('localizacion-id');
+        if (localizacionIdInput) {
+            localizacionIdInput.value = '';
+        }
+        const title = document.getElementById('localizacion-form-title');
+        if (title) {
+            title.textContent = 'Nueva Localización';
+        }
+        this.showView('localizacion-form');
+    },
+    
+    async editLocalizacion(id) {
+        try {
+            if (!id || typeof id !== 'string') {
+                alert('ID de localización inválido');
+                return;
+            }
+            
+            const localizacion = await localizacionesStorage.getById(id);
+            
+            if (localizacion) {
+                const title = document.getElementById('localizacion-form-title');
+                if (title) {
+                    title.textContent = 'Editar Localización';
+                }
+                this.showView('localizacion-form');
+                ui.renderLocalizacionForm(localizacion);
+            } else {
+                alert('No se pudo cargar la localización. Por favor, inténtalo de nuevo.');
+            }
+        } catch (error) {
+            console.error('Error loading localizacion:', error);
+            alert('Error al cargar la localización: ' + (error.message || 'Error desconocido'));
+        }
+    },
+    
+    async deleteLocalizacion(id) {
+        if (!confirm('¿Estás seguro de que quieres eliminar esta localización?')) {
+            return;
+        }
+        
+        try {
+            if (!id || typeof id !== 'string') {
+                alert('ID de localización inválido');
+                return;
+            }
+            
+            const success = await localizacionesStorage.delete(id);
+            if (success) {
+                this.refreshLocalizaciones();
+            } else {
+                alert('Error al eliminar la localización.');
+            }
+        } catch (error) {
+            console.error('Error deleting localizacion:', error);
+            alert('Error al eliminar la localización.');
+        }
+    },
+    
+    async saveLocalizacion() {
+        const idValue = document.getElementById('localizacion-id').value;
+        const localizacionName = document.getElementById('localizacion-name').value;
+        const localizacionDescription = document.getElementById('localizacion-description').value;
+        
+        if (!localizacionName || localizacionName.trim().length === 0) {
+            alert('El nombre de la localización es obligatorio');
+            return;
+        }
+        
+        const localizacion = {
+            name: localizacionName.trim(),
+            description: localizacionDescription ? localizacionDescription.trim() : null
+        };
+        
+        try {
+            if (idValue && idValue.trim() !== '') {
+                await localizacionesStorage.update(idValue.trim(), localizacion);
+            } else {
+                await localizacionesStorage.add(localizacion);
+            }
+            
+            this.refreshLocalizaciones();
+            this.showView('localizaciones');
+        } catch (error) {
+            console.error('Error saving localizacion:', error);
+            alert('Error al guardar la localización: ' + (error.message || 'Error desconocido'));
         }
     },
     
@@ -1168,11 +1298,11 @@ const app = {
         const canalOrigenIdInput = document.getElementById('compra-canal-origen-id');
         const productNameInput = document.getElementById('compra-product-name');
         const productNameDisplay = document.getElementById('compra-product-name-display');
-        const precioUnitarioInput = document.getElementById('compra-precio-unitario');
-        const unidadesInput = document.getElementById('compra-unidades');
+        const precioBaseInput = document.getElementById('compra-precio-base');
         const fechaInput = document.getElementById('compra-fecha');
+        const itemsContainer = document.getElementById('compra-items-container');
         
-        if (!modal || !opportunityIdInput || !canalOrigenIdInput || !productNameInput || !productNameDisplay || !precioUnitarioInput || !unidadesInput || !fechaInput) {
+        if (!modal || !opportunityIdInput || !canalOrigenIdInput || !productNameInput || !productNameDisplay || !precioBaseInput || !fechaInput || !itemsContainer) {
             console.error('Compra modal elements not found');
             return;
         }
@@ -1195,9 +1325,13 @@ const app = {
         canalOrigenIdInput.value = canalOrigenId || '';
         productNameInput.value = finalProductName || '';
         productNameDisplay.value = finalProductName || '';
-        precioUnitarioInput.value = estimatedPrice || '';
-        unidadesInput.value = 1;
+        precioBaseInput.value = estimatedPrice || '';
         fechaInput.value = new Date().toISOString().split('T')[0];
+        
+        // Limpiar y reinicializar el contenedor de items
+        itemsContainer.innerHTML = '';
+        this.addCompraRow();
+        
         modal.classList.remove('hidden');
     },
     
@@ -1211,6 +1345,152 @@ const app = {
         if (form) {
             form.reset();
         }
+        
+        // Limpiar el contenedor de items
+        const itemsContainer = document.getElementById('compra-items-container');
+        if (itemsContainer) {
+            itemsContainer.innerHTML = '';
+        }
+    },
+    
+    addCompraRow() {
+        const itemsContainer = document.getElementById('compra-items-container');
+        const precioBaseInput = document.getElementById('compra-precio-base');
+        const precioBase = precioBaseInput ? parseFloat(precioBaseInput.value) || 0 : 0;
+        
+        if (!itemsContainer) {
+            console.error('Items container not found');
+            return;
+        }
+        
+        const rowIndex = itemsContainer.children.length;
+        const row = document.createElement('div');
+        row.className = 'flex gap-2 items-end border border-gray-200 rounded-md p-3 bg-gray-50';
+        row.setAttribute('data-row-index', rowIndex);
+        
+        row.innerHTML = `
+            <div class="flex-1">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Talla (opcional)</label>
+                <input type="text" 
+                       class="compra-item-talla block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                       placeholder="42, S, M, L..."
+                       data-row="${rowIndex}">
+            </div>
+            <div class="flex-1">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Unidades *</label>
+                <input type="number" 
+                       class="compra-item-unidades block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                       min="1" 
+                       value="1" 
+                       required
+                       data-row="${rowIndex}">
+            </div>
+            <div class="flex-1">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Precio Unit. (€)</label>
+                <input type="number" 
+                       class="compra-item-precio block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                       step="0.01" 
+                       min="0" 
+                       value="${precioBase}"
+                       placeholder="Precio base"
+                       data-row="${rowIndex}">
+            </div>
+            <div class="flex-shrink-0">
+                <button type="button" 
+                        onclick="app.removeCompraRow(${rowIndex})" 
+                        class="text-red-600 hover:text-red-800 p-2"
+                        ${rowIndex === 0 ? 'disabled class="text-gray-400 cursor-not-allowed"' : ''}
+                        title="${rowIndex === 0 ? 'No se puede eliminar la primera fila' : 'Eliminar fila'}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+        
+        itemsContainer.appendChild(row);
+    },
+    
+    removeCompraRow(index) {
+        const itemsContainer = document.getElementById('compra-items-container');
+        if (!itemsContainer) return;
+        
+        const rows = itemsContainer.querySelectorAll('[data-row-index]');
+        if (rows.length <= 1) {
+            alert('Debe haber al menos una fila');
+            return;
+        }
+        
+        const rowToRemove = Array.from(rows).find(row => parseInt(row.getAttribute('data-row-index')) === index);
+        if (rowToRemove) {
+            rowToRemove.remove();
+            // Reindexar las filas restantes
+            this.reindexCompraRows();
+        }
+    },
+    
+    reindexCompraRows() {
+        const itemsContainer = document.getElementById('compra-items-container');
+        if (!itemsContainer) return;
+        
+        const rows = itemsContainer.querySelectorAll('[data-row-index]');
+        rows.forEach((row, newIndex) => {
+            const oldIndex = parseInt(row.getAttribute('data-row-index'));
+            row.setAttribute('data-row-index', newIndex);
+            
+            // Actualizar los data-row de los inputs
+            row.querySelectorAll('[data-row]').forEach(input => {
+                input.setAttribute('data-row', newIndex);
+            });
+            
+            // Actualizar el onclick del botón de eliminar
+            const removeBtn = row.querySelector('button[onclick*="removeCompraRow"]');
+            if (removeBtn) {
+                removeBtn.setAttribute('onclick', `app.removeCompraRow(${newIndex})`);
+                if (newIndex === 0) {
+                    removeBtn.disabled = true;
+                    removeBtn.className = 'text-gray-400 cursor-not-allowed p-2';
+                    removeBtn.title = 'No se puede eliminar la primera fila';
+                } else {
+                    removeBtn.disabled = false;
+                    removeBtn.className = 'text-red-600 hover:text-red-800 p-2';
+                    removeBtn.title = 'Eliminar fila';
+                }
+            }
+        });
+    },
+    
+    getCompraItems() {
+        const itemsContainer = document.getElementById('compra-items-container');
+        const precioBaseInput = document.getElementById('compra-precio-base');
+        const precioBase = precioBaseInput ? parseFloat(precioBaseInput.value) || 0 : 0;
+        
+        if (!itemsContainer) {
+            return [];
+        }
+        
+        const rows = itemsContainer.querySelectorAll('[data-row-index]');
+        const items = [];
+        
+        rows.forEach((row, index) => {
+            const tallaInput = row.querySelector('.compra-item-talla');
+            const unidadesInput = row.querySelector('.compra-item-unidades');
+            const precioInput = row.querySelector('.compra-item-precio');
+            
+            const talla = tallaInput ? tallaInput.value.trim() : '';
+            const unidades = unidadesInput ? parseInt(unidadesInput.value) : 0;
+            const precio = precioInput && precioInput.value ? parseFloat(precioInput.value) : precioBase;
+            
+            if (unidades > 0) {
+                items.push({
+                    talla: talla || null,
+                    unidades: unidades,
+                    precio_unitario: precio
+                });
+            }
+        });
+        
+        return items;
     },
     
     closeCompraModalOnOverlay(event) {
@@ -1223,8 +1503,6 @@ const app = {
         const opportunityId = document.getElementById('compra-opportunity-id').value;
         const canalOrigenId = document.getElementById('compra-canal-origen-id').value;
         const productName = document.getElementById('compra-product-name').value;
-        const precioUnitario = document.getElementById('compra-precio-unitario').value;
-        const unidades = document.getElementById('compra-unidades').value;
         const fecha = document.getElementById('compra-fecha').value;
         
         if (!canalOrigenId) {
@@ -1237,31 +1515,39 @@ const app = {
             return;
         }
         
-        if (!precioUnitario || parseFloat(precioUnitario) < 0) {
-            alert('El precio unitario debe ser mayor o igual a 0');
-            return;
-        }
-        
-        if (!unidades || parseInt(unidades) <= 0) {
-            alert('Las unidades deben ser mayor a 0');
-            return;
-        }
-        
         if (!fecha) {
             alert('La fecha de compra es obligatoria');
             return;
         }
         
+        // Obtener items del formulario
+        const items = this.getCompraItems();
+        
+        if (items.length === 0) {
+            alert('Debe haber al menos una fila con unidades mayor a 0');
+            return;
+        }
+        
+        // Validar que todos los items tengan unidades válidas
+        const invalidItems = items.filter(item => !item.unidades || item.unidades < 1);
+        if (invalidItems.length > 0) {
+            alert('Todas las filas deben tener al menos 1 unidad');
+            return;
+        }
+        
+        const precioBaseInput = document.getElementById('compra-precio-base');
+        const precioBase = precioBaseInput ? parseFloat(precioBaseInput.value) || 0 : 0;
+        
         try {
-            await comprasStorage.createFromOpportunity(
+            const result = await comprasStorage.createMultipleFromOpportunity(
                 opportunityId || null,
                 canalOrigenId,
                 productName.trim(),
-                precioUnitario,
-                unidades,
-                [],
-                fecha
+                items,
+                fecha,
+                precioBase
             );
+            
             this.closeCompraModal();
             await this.loadChannels();
             if (opportunityId) {
@@ -1269,7 +1555,9 @@ const app = {
             }
             this.refreshStock();
             this.refreshBusinessDashboard();
-            alert('Compra registrada exitosamente. El stock ha sido creado automáticamente.');
+            
+            const totalCompras = result.compras ? result.compras.length : items.length;
+            alert(`${totalCompras} compra(s) registrada(s) exitosamente. El stock ha sido creado automáticamente.`);
         } catch (error) {
             console.error('Error registrando compra:', error);
             alert('Error al registrar la compra: ' + (error.message || 'Error desconocido'));
@@ -1379,6 +1667,36 @@ const app = {
         } catch (error) {
             console.error('Error registrando venta:', error);
             alert('Error al registrar la venta: ' + (error.message || 'Error desconocido'));
+        }
+    },
+    
+    async recepcionarStock(id) {
+        try {
+            if (!id || typeof id !== 'string') {
+                alert('ID de stock inválido');
+                return;
+            }
+            
+            await stockStorage.recepcionar(id);
+            this.refreshStock();
+        } catch (error) {
+            console.error('Error recepcionando stock:', error);
+            alert('Error al recepcionar el stock: ' + (error.message || 'Error desconocido'));
+        }
+    },
+    
+    async ponerAVentaStock(id) {
+        try {
+            if (!id || typeof id !== 'string') {
+                alert('ID de stock inválido');
+                return;
+            }
+            
+            await stockStorage.ponerAVenta(id);
+            this.refreshStock();
+        } catch (error) {
+            console.error('Error poniendo stock a venta:', error);
+            alert('Error al poner el stock a venta: ' + (error.message || 'Error desconocido'));
         }
     },
     

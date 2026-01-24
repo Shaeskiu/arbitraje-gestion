@@ -40,11 +40,17 @@ const ui = {
                 ? parseFloat(opportunity.precioEstimadoVenta)
                 : (opportunity.destPrice !== undefined ? parseFloat(opportunity.destPrice) : 0);
             
-            const margenEstimado = opportunity.margenEstimado !== undefined && opportunity.margenEstimado !== null
-                ? parseFloat(opportunity.margenEstimado)
-                : (precioVenta - precioCompra);
+            // Asegurar que la oportunidad tenga los campos necesarios para arbitrage.calculate()
+            const opportunityForCalc = {
+                ...opportunity,
+                originPrice: precioCompra,
+                destPrice: precioVenta
+            };
             
-            const rentabilidadEstimada = precioCompra > 0 ? (margenEstimado / precioCompra) * 100 : 0;
+            // Calcular margen y rentabilidad teniendo en cuenta los costes
+            const calc = arbitrage.calculate(opportunityForCalc);
+            const margenNeto = calc.estimated.netMargin;
+            const rentabilidadEstimada = calc.estimated.profitability;
             
             const row = document.createElement('tr');
             row.className = 'hover:bg-gray-50';
@@ -88,7 +94,8 @@ const ui = {
                     <div class="text-sm text-gray-500">Venta Est: ${this.formatCurrency(precioVenta)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${this.formatCurrency(margenEstimado)}</div>
+                    <div class="text-sm text-gray-900">${this.formatCurrency(calc.estimated.grossMargin)}</div>
+                    <div class="text-xs text-gray-500">Neto: ${this.formatCurrency(margenNeto)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm ${rentabilidadEstimada >= 0 ? 'text-green-600' : 'text-red-600'}">
@@ -495,6 +502,63 @@ const ui = {
         return str.charAt(0).toUpperCase() + str.slice(1);
     },
     
+    renderLocalizaciones(localizaciones) {
+        const tbody = document.getElementById('localizaciones-table');
+        if (!tbody) {
+            console.error('Localizaciones table body not found');
+            return;
+        }
+        
+        tbody.innerHTML = '';
+        
+        if (!localizaciones || localizaciones.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center text-gray-500">No hay localizaciones registradas</td></tr>';
+            return;
+        }
+        
+        localizaciones.forEach(localizacion => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50';
+            
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${this.escapeHtml(localizacion.name)}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="text-sm text-gray-500">${localizacion.description ? this.escapeHtml(localizacion.description) : '-'}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button onclick="app.editLocalizacion('${localizacion.id}')" class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</button>
+                    <button onclick="app.deleteLocalizacion('${localizacion.id}')" class="text-red-600 hover:text-red-900">Eliminar</button>
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+    },
+    
+    renderLocalizacionForm(localizacion = null) {
+        const form = document.getElementById('localizacion-form');
+        if (!form) {
+            console.error('Localizacion form not found');
+            return;
+        }
+        
+        if (localizacion) {
+            const localizacionIdInput = document.getElementById('localizacion-id');
+            const localizacionNameInput = document.getElementById('localizacion-name');
+            const localizacionDescriptionInput = document.getElementById('localizacion-description');
+            
+            if (localizacionIdInput) localizacionIdInput.value = localizacion.id || '';
+            if (localizacionNameInput) localizacionNameInput.value = localizacion.name || '';
+            if (localizacionDescriptionInput) localizacionDescriptionInput.value = localizacion.description || '';
+        } else {
+            form.reset();
+            const localizacionIdInput = document.getElementById('localizacion-id');
+            if (localizacionIdInput) localizacionIdInput.value = '';
+        }
+    },
+    
     renderChannels(channels) {
         const tbody = document.getElementById('channels-table');
         tbody.innerHTML = '';
@@ -726,7 +790,7 @@ const ui = {
         tbody.innerHTML = '';
         
         if (!stockItems || stockItems.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">No hay stock disponible</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-4 text-center text-gray-500">No hay stock disponible</td></tr>';
             return;
         }
         
@@ -736,6 +800,58 @@ const ui = {
             
             const valorTotal = stock.unidadesDisponibles * stock.costeUnitarioReal;
             const formattedDate = stock.fechaCompra ? new Date(stock.fechaCompra).toLocaleDateString('es-ES') : 'N/A';
+            
+            // Mapear estados a badges de color
+            const estadoLabels = {
+                'pendiente_recibir': 'Pendiente de recibir',
+                'recepcionado': 'Recepcionado',
+                'disponible': 'Disponible'
+            };
+            
+            const estadoColors = {
+                'pendiente_recibir': 'bg-yellow-100 text-yellow-800',
+                'recepcionado': 'bg-blue-100 text-blue-800',
+                'disponible': 'bg-green-100 text-green-800'
+            };
+            
+            const estado = stock.estado || 'disponible';
+            const estadoLabel = estadoLabels[estado] || estado;
+            const estadoClass = estadoColors[estado] || 'bg-gray-100 text-gray-800';
+            
+            // Localización
+            const localizacionName = stock.localizacion ? stock.localizacion.name : (stock.localizacionName || '-');
+            
+            // Botones de acción según estado
+            let accionesHtml = '';
+            if (estado === 'pendiente_recibir') {
+                accionesHtml = `
+                    <button onclick="app.recepcionarStock('${stock.id}')" 
+                            class="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50" 
+                            title="Recepcionar stock">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </button>
+                `;
+            } else if (estado === 'recepcionado') {
+                accionesHtml = `
+                    <button onclick="app.ponerAVentaStock('${stock.id}')" 
+                            class="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50" 
+                            title="Poner a venta">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </button>
+                `;
+            } else if (estado === 'disponible' && stock.unidadesDisponibles > 0) {
+                accionesHtml = `
+                    <button onclick="app.openVentaModal('${stock.id}', ${stock.unidadesDisponibles})" 
+                            class="text-green-600 hover:text-green-900" 
+                            title="Registrar Venta">
+                        Vender
+                    </button>
+                `;
+            }
             
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap">
@@ -760,12 +876,15 @@ const ui = {
                     <div class="text-sm text-gray-500">${formattedDate}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${stock.unidadesDisponibles > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
-                        ${stock.unidadesDisponibles > 0 ? 'Disponible' : 'Agotado'}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${estadoClass}">
+                        ${estadoLabel}
                     </span>
                 </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${this.escapeHtml(localizacionName)}</div>
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    ${stock.unidadesDisponibles > 0 ? `<button onclick="app.openVentaModal('${stock.id}', ${stock.unidadesDisponibles})" class="text-green-600 hover:text-green-900" title="Registrar Venta">Vender</button>` : ''}
+                    ${accionesHtml}
                 </td>
             `;
             
@@ -869,10 +988,23 @@ const ui = {
             
             const producto = compra.product_name || compra.oportunidad_product_name || 'Sin producto';
             const canalOrigen = compra.canal_origen_name || 'N/A';
-            const desdeOportunidad = compra.oportunidad_id ? 'Sí' : 'No';
-            const desdeOportunidadClass = compra.oportunidad_id 
-                ? 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800'
-                : 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800';
+            
+            // Renderizar columna "Viene de oportunidad" con icono de ojo si tiene oportunidad
+            let desdeOportunidadHtml = '';
+            if (compra.oportunidad_id) {
+                desdeOportunidadHtml = `
+                    <button onclick="app.showDetail('${compra.oportunidad_id}')" 
+                            class="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50" 
+                            title="Ver oportunidad">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                    </button>
+                `;
+            } else {
+                desdeOportunidadHtml = '<span class="text-gray-400">-</span>';
+            }
             
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap">
@@ -893,10 +1025,8 @@ const ui = {
                 <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm font-medium text-indigo-600">${this.formatCurrency(compra.total_compra || 0)}</div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="${desdeOportunidadClass}">
-                        ${desdeOportunidad}
-                    </span>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                    ${desdeOportunidadHtml}
                 </td>
             `;
             

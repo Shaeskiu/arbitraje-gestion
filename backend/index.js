@@ -656,6 +656,173 @@ app.delete('/channels/:id', async (req, res) => {
 });
 
 // ============================================
+// LOCALIZACIONES ENDPOINTS
+// ============================================
+
+app.get('/localizaciones', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('localizaciones')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return res.status(500).json({ error: 'Database error', details: error.message });
+    }
+
+    res.json(data || []);
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.get('/localizaciones/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid localizacion ID' });
+    }
+
+    const { data, error } = await supabase
+      .from('localizaciones')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Localizacion not found' });
+      }
+      console.error('Supabase error:', error);
+      return res.status(500).json({ error: 'Database error', details: error.message });
+    }
+
+    if (!data) {
+      return res.status(404).json({ error: 'Localizacion not found' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.post('/localizaciones', async (req, res) => {
+  try {
+    const localizacion = req.body;
+
+    if (!localizacion.name || typeof localizacion.name !== 'string' || localizacion.name.trim().length === 0) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    const { data: newLocalizacion, error: locError } = await supabase
+      .from('localizaciones')
+      .insert([{
+        name: localizacion.name.trim(),
+        description: localizacion.description ? localizacion.description.trim() : null
+      }])
+      .select()
+      .single();
+
+    if (locError) {
+      console.error('Supabase error:', locError);
+      if (locError.code === '23505') { // Unique violation
+        return res.status(409).json({ error: 'A localizacion with this name already exists' });
+      }
+      return res.status(500).json({ error: 'Database error', details: locError.message });
+    }
+
+    res.status(201).json(newLocalizacion);
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.put('/localizaciones/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid localizacion ID' });
+    }
+
+    const localizacion = req.body;
+
+    if (!localizacion.name || typeof localizacion.name !== 'string' || localizacion.name.trim().length === 0) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    const { error: updateError } = await supabase
+      .from('localizaciones')
+      .update({
+        name: localizacion.name.trim(),
+        description: localizacion.description ? localizacion.description.trim() : null
+      })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Supabase error:', updateError);
+      if (updateError.code === '23505') { // Unique violation
+        return res.status(409).json({ error: 'A localizacion with this name already exists' });
+      }
+      if (updateError.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Localizacion not found' });
+      }
+      return res.status(500).json({ error: 'Database error', details: updateError.message });
+    }
+
+    const { data: updatedLocalizacion, error: fetchError } = await supabase
+      .from('localizaciones')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      console.error('Supabase error:', fetchError);
+      return res.status(500).json({ error: 'Database error', details: fetchError.message });
+    }
+
+    res.json(updatedLocalizacion);
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.delete('/localizaciones/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid localizacion ID' });
+    }
+
+    const { error } = await supabase
+      .from('localizaciones')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Supabase error:', error);
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Localizacion not found' });
+      }
+      return res.status(500).json({ error: 'Database error', details: error.message });
+    }
+
+    res.status(204).send();
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// ============================================
 // COMPRAS ENDPOINTS
 // ============================================
 
@@ -773,6 +940,165 @@ app.post('/compras', async (req, res) => {
     res.status(201).json({
       compra,
       stock: stockCreated
+    });
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.post('/compras/multiple', async (req, res) => {
+  try {
+    const { oportunidad_id, canal_origen_id, product_name_base, precio_base, fecha_compra, items } = req.body;
+
+    // Validaciones básicas
+    if (!canal_origen_id || typeof canal_origen_id !== 'string' || !isValidUUID(canal_origen_id)) {
+      return res.status(400).json({ error: 'Valid canal_origen_id is required' });
+    }
+
+    if (!product_name_base || typeof product_name_base !== 'string' || !product_name_base.trim()) {
+      return res.status(400).json({ error: 'Valid product_name_base is required' });
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'At least one item is required' });
+    }
+
+    // Validar oportunidad si se proporciona
+    if (oportunidad_id) {
+      if (typeof oportunidad_id !== 'string' || !isValidUUID(oportunidad_id)) {
+        return res.status(400).json({ error: 'Invalid oportunidad_id format' });
+      }
+
+      const { data: opportunity, error: oppError } = await supabase
+        .from('opportunities')
+        .select('id, status, product_name')
+        .eq('id', oportunidad_id)
+        .single();
+
+      if (oppError || !opportunity) {
+        return res.status(404).json({ error: 'Oportunidad not found' });
+      }
+
+      if (opportunity.status === 'convertida') {
+        return res.status(400).json({ error: 'Oportunidad ya está convertida' });
+      }
+    }
+
+    // Validar canal origen
+    const { data: channel, error: channelError } = await supabase
+      .from('channels')
+      .select('id')
+      .eq('id', canal_origen_id)
+      .single();
+
+    if (channelError || !channel) {
+      return res.status(404).json({ error: 'Canal origen not found' });
+    }
+
+    // Validar y procesar cada item
+    const comprasCreadas = [];
+    const stocksCreados = [];
+
+    for (const item of items) {
+      // Validar item
+      if (!item.unidades || parseInt(item.unidades) < 1) {
+        return res.status(400).json({ error: 'Each item must have unidades >= 1' });
+      }
+
+      const unidadesNum = parseInt(item.unidades);
+      // Usar precio del item si está especificado, sino usar precio_base
+      const precioUnitario = item.precio_unitario !== undefined && item.precio_unitario !== null
+        ? parseFloat(item.precio_unitario)
+        : (precio_base !== undefined && precio_base !== null ? parseFloat(precio_base) : 0);
+
+      if (isNaN(precioUnitario) || precioUnitario < 0) {
+        return res.status(400).json({ error: 'Invalid precio_unitario in item or precio_base' });
+      }
+
+      // Construir product_name con talla si existe
+      let productName = product_name_base.trim();
+      if (item.talla && item.talla.trim()) {
+        productName = `${product_name_base.trim()} - Talla ${item.talla.trim()}`;
+      }
+
+      // Calcular total de compra
+      const precioUnitarioFinal = precioUnitario;
+      const costesCompraArray = Array.isArray(item.costes_compra) ? item.costes_compra : [];
+      const totalCostes = costesCompraArray.reduce((sum, coste) => {
+        return sum + (parseFloat(coste.value) || 0);
+      }, 0);
+      const totalCompra = (precioUnitarioFinal * unidadesNum) + totalCostes;
+
+      // Crear compra
+      const compraData = {
+        oportunidad_id: oportunidad_id || null,
+        canal_origen_id: canal_origen_id,
+        product_name: productName,
+        precio_unitario: precioUnitarioFinal,
+        unidades: unidadesNum,
+        costes_compra: costesCompraArray,
+        total_compra: totalCompra,
+        fecha_compra: fecha_compra || new Date().toISOString().split('T')[0]
+      };
+
+      const { data: compra, error: compraError } = await supabase
+        .from('compras')
+        .insert(compraData)
+        .select('*')
+        .single();
+
+      if (compraError) {
+        console.error('Error creating compra:', compraError);
+        return res.status(500).json({ error: 'Error creating compra', details: compraError.message });
+      }
+
+      comprasCreadas.push(compra);
+
+      // El stock se crea automáticamente mediante trigger, obtenerlo
+      // Intentar obtener el stock, pero si falla por columnas nuevas, continuar sin él
+      let stockCreated = null;
+      try {
+        const stockResult = await supabase
+          .from('stock')
+          .select('id, compra_id, unidades_iniciales, unidades_disponibles, coste_unitario_real, created_at, updated_at')
+          .eq('compra_id', compra.id)
+          .single();
+        
+        if (stockResult.data) {
+          stockCreated = stockResult.data;
+        } else if (stockResult.error && stockResult.error.code !== 'PGRST204') {
+          console.error('Error fetching stock:', stockResult.error);
+        }
+      } catch (err) {
+        console.error('Error fetching stock (non-critical):', err);
+        // No fallar la operación si el stock no se puede obtener
+      }
+
+      if (stockCreated) {
+        stocksCreados.push(stockCreated);
+      } else if (stockError) {
+        console.error('Error fetching stock:', stockError);
+        // No fallar la operación si el stock no se puede obtener, pero loguear el error
+      }
+    }
+
+    // Actualizar estado de oportunidad si existe (solo una vez)
+    if (oportunidad_id) {
+      const { error: updateError } = await supabase
+        .from('opportunities')
+        .update({ status: 'convertida' })
+        .eq('id', oportunidad_id);
+
+      if (updateError) {
+        console.error('Error updating opportunity status:', updateError);
+        // No revertir las compras, solo loggear el error
+      }
+    }
+
+    res.status(201).json({
+      compras: comprasCreadas,
+      stocks: stocksCreados
     });
   } catch (error) {
     console.error('Unexpected error:', error);
@@ -931,47 +1257,73 @@ app.put('/compras/:id', async (req, res) => {
 
 app.get('/stock', async (req, res) => {
   try {
-    const { data: stockItems, error } = await supabase
+    // Permitir filtrar por estado si se proporciona
+    const { estado } = req.query;
+    let query = supabase
       .from('stock')
       .select('*')
-      .gt('unidades_disponibles', 0)
       .order('created_at', { ascending: false });
+
+    // Si no se especifica estado, mostrar todos (no solo disponibles)
+    if (estado) {
+      query = query.eq('estado', estado);
+    } else {
+      // Por defecto, mostrar todos excepto los que están completamente vendidos
+      query = query.gt('unidades_disponibles', 0);
+    }
+
+    const { data: stockItems, error } = await query;
 
     if (error) {
       console.error('Supabase error:', error);
       return res.status(500).json({ error: 'Database error', details: error.message });
     }
 
-    // Enriquecer con datos de compras
+    // Enriquecer con datos de compras y localizaciones
     if (stockItems && stockItems.length > 0) {
       const compraIds = [...new Set(stockItems.map(s => s.compra_id).filter(Boolean))];
+      const localizacionIds = [...new Set(stockItems.map(s => s.localizacion_id).filter(Boolean))];
       
-      const { data: compras } = await supabase
-        .from('compras')
-        .select('id, oportunidad_id, canal_origen_id, product_name, fecha_compra')
-        .in('id', compraIds);
+      const [comprasData, localizacionesData] = await Promise.all([
+        compraIds.length > 0 
+          ? supabase.from('compras').select('id, oportunidad_id, canal_origen_id, product_name, fecha_compra').in('id', compraIds)
+          : { data: [] },
+        localizacionIds.length > 0
+          ? supabase.from('localizaciones').select('id, name, description').in('id', localizacionIds)
+          : { data: [] }
+      ]);
 
-      const channelIds = [...new Set(compras?.map(c => c.canal_origen_id).filter(Boolean) || [])];
+      const compras = comprasData.data || [];
+      const localizaciones = localizacionesData.data || [];
+
+      const channelIds = [...new Set(compras.map(c => c.canal_origen_id).filter(Boolean))];
 
       const channelsData = channelIds.length > 0 
         ? await supabase.from('channels').select('id, name').in('id', channelIds)
         : { data: [] };
 
       const comprasMap = {};
-      if (compras) {
-        compras.forEach(c => { comprasMap[c.id] = c; });
-      }
+      compras.forEach(c => { comprasMap[c.id] = c; });
 
       const channelsMap = {};
       if (channelsData.data) {
         channelsData.data.forEach(ch => { channelsMap[ch.id] = ch.name; });
       }
 
+      const localizacionesMap = {};
+      localizaciones.forEach(loc => { localizacionesMap[loc.id] = loc; });
+
       const enriched = stockItems.map(stock => {
         const compra = comprasMap[stock.compra_id];
+        const localizacion = stock.localizacion_id ? localizacionesMap[stock.localizacion_id] : null;
         return {
           ...stock,
           product_name: compra?.product_name || stock.product_name || null,
+          localizacion: localizacion ? {
+            id: localizacion.id,
+            name: localizacion.name,
+            description: localizacion.description
+          } : null,
           compra: compra ? {
             ...compra,
             canal_origen: channelsMap[compra.canal_origen_id] ? { id: compra.canal_origen_id, name: channelsMap[compra.canal_origen_id] } : null
@@ -1036,7 +1388,163 @@ app.get('/stock/:id', async (req, res) => {
       }
     }
 
+    // Enriquecer con localización si existe
+    if (stockItem.localizacion_id) {
+      const { data: localizacion } = await supabase
+        .from('localizaciones')
+        .select('id, name, description')
+        .eq('id', stockItem.localizacion_id)
+        .single();
+
+      if (localizacion) {
+        stockItem.localizacion = {
+          id: localizacion.id,
+          name: localizacion.name,
+          description: localizacion.description
+        };
+      }
+    }
+
     res.json(stockItem);
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.put('/stock/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid stock ID' });
+    }
+
+    const updates = req.body || {};
+
+    // Validar estado si se proporciona
+    if (updates.estado) {
+      const estadosValidos = ['pendiente_recibir', 'recepcionado', 'disponible'];
+      if (!estadosValidos.includes(updates.estado)) {
+        return res.status(400).json({ error: `Invalid estado. Must be one of: ${estadosValidos.join(', ')}` });
+      }
+    }
+
+    // Validar localizacion_id si se proporciona
+    if (updates.localizacion_id !== undefined) {
+      if (updates.localizacion_id !== null && (!isValidUUID(updates.localizacion_id))) {
+        return res.status(400).json({ error: 'Invalid localizacion_id format' });
+      }
+    }
+
+    const { data: updatedStock, error: updateError } = await supabase
+      .from('stock')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      if (updateError.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Stock item not found' });
+      }
+      console.error('Supabase error:', updateError);
+      return res.status(500).json({ error: 'Database error', details: updateError.message });
+    }
+
+    res.json(updatedStock);
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.post('/stock/:id/recepcionar', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid stock ID' });
+    }
+
+    // Verificar que el stock existe y está en estado correcto
+    const { data: stockItem, error: fetchError } = await supabase
+      .from('stock')
+      .select('estado')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      if (fetchError.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Stock item not found' });
+      }
+      console.error('Supabase error:', fetchError);
+      return res.status(500).json({ error: 'Database error', details: fetchError.message });
+    }
+
+    if (stockItem.estado !== 'pendiente_recibir') {
+      return res.status(400).json({ error: `Cannot recepcionar stock in estado: ${stockItem.estado}. Must be 'pendiente_recibir'` });
+    }
+
+    const { data: updatedStock, error: updateError } = await supabase
+      .from('stock')
+      .update({ estado: 'recepcionado' })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Supabase error:', updateError);
+      return res.status(500).json({ error: 'Database error', details: updateError.message });
+    }
+
+    res.json(updatedStock);
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.post('/stock/:id/poner-a-venta', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid stock ID' });
+    }
+
+    // Verificar que el stock existe y está en estado correcto
+    const { data: stockItem, error: fetchError } = await supabase
+      .from('stock')
+      .select('estado')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      if (fetchError.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Stock item not found' });
+      }
+      console.error('Supabase error:', fetchError);
+      return res.status(500).json({ error: 'Database error', details: fetchError.message });
+    }
+
+    if (stockItem.estado !== 'recepcionado') {
+      return res.status(400).json({ error: `Cannot poner a venta stock in estado: ${stockItem.estado}. Must be 'recepcionado'` });
+    }
+
+    const { data: updatedStock, error: updateError } = await supabase
+      .from('stock')
+      .update({ estado: 'disponible' })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Supabase error:', updateError);
+      return res.status(500).json({ error: 'Database error', details: updateError.message });
+    }
+
+    res.json(updatedStock);
   } catch (error) {
     console.error('Unexpected error:', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
@@ -1071,12 +1579,19 @@ app.post('/ventas', async (req, res) => {
     // Verificar stock disponible y obtener product_name
     const { data: stockItem, error: stockError } = await supabase
       .from('stock')
-      .select('unidades_disponibles, coste_unitario_real, compra_id')
+      .select('unidades_disponibles, coste_unitario_real, compra_id, estado')
       .eq('id', stock_id)
       .single();
 
     if (stockError || !stockItem) {
       return res.status(404).json({ error: 'Stock item not found' });
+    }
+
+    // Validar que el stock esté en estado 'disponible'
+    if (stockItem.estado !== 'disponible') {
+      return res.status(400).json({ 
+        error: `No se puede vender stock en estado '${stockItem.estado}'. El stock debe estar en estado 'disponible' para poder venderse.` 
+      });
     }
 
     const unidadesNum = parseInt(unidades);

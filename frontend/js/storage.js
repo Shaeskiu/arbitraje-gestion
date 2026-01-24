@@ -454,6 +454,67 @@ const comprasStorage = {
         }
     },
     
+    async createMultipleFromOpportunity(opportunityId, canalOrigenId, productNameBase, items, fechaCompra = null, precioBase = 0) {
+        try {
+            if (!canalOrigenId || typeof canalOrigenId !== 'string') {
+                throw new Error('Valid canal origen ID is required');
+            }
+            
+            if (!productNameBase || typeof productNameBase !== 'string' || !productNameBase.trim()) {
+                throw new Error('Product name is required');
+            }
+            
+            if (!Array.isArray(items) || items.length === 0) {
+                throw new Error('At least one item is required');
+            }
+            
+            // Validar items
+            items.forEach((item, index) => {
+                if (!item.unidades || parseInt(item.unidades) < 1) {
+                    throw new Error(`Item ${index + 1}: unidades must be at least 1`);
+                }
+                if (item.precio_unitario !== undefined && item.precio_unitario !== null && parseFloat(item.precio_unitario) < 0) {
+                    throw new Error(`Item ${index + 1}: precio_unitario must be >= 0`);
+                }
+            });
+            
+            const requestData = {
+                oportunidad_id: opportunityId && opportunityId !== '' ? opportunityId : null,
+                canal_origen_id: canalOrigenId,
+                product_name_base: productNameBase.trim(),
+                precio_base: precioBase,
+                fecha_compra: fechaCompra || new Date().toISOString().split('T')[0],
+                items: items.map(item => ({
+                    talla: item.talla && item.talla.trim() ? item.talla.trim() : null,
+                    unidades: parseInt(item.unidades),
+                    precio_unitario: item.precio_unitario !== undefined && item.precio_unitario !== null 
+                        ? parseFloat(item.precio_unitario) 
+                        : null,
+                    costes_compra: item.costes_compra || []
+                }))
+            };
+            
+            const response = await fetch(`${this.apiBaseUrl}/compras/multiple`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Error creating multiple compras:', error);
+            throw error;
+        }
+    },
+    
     async getAll() {
         try {
             const response = await fetch(`${this.apiBaseUrl}/compras`);
@@ -564,6 +625,67 @@ const stockStorage = {
         }
     },
     
+    async recepcionar(id) {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/stock/${id}/recepcionar`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+            }
+            
+            const updatedStock = await response.json();
+            return this.transformFromDB(updatedStock);
+        } catch (error) {
+            console.error('Error recepcionando stock:', error);
+            throw error;
+        }
+    },
+    
+    async ponerAVenta(id) {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/stock/${id}/poner-a-venta`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+            }
+            
+            const updatedStock = await response.json();
+            return this.transformFromDB(updatedStock);
+        } catch (error) {
+            console.error('Error poniendo stock a venta:', error);
+            throw error;
+        }
+    },
+    
+    async update(id, updates) {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/stock/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updates)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+            }
+            
+            const updatedStock = await response.json();
+            return this.transformFromDB(updatedStock);
+        } catch (error) {
+            console.error('Error updating stock:', error);
+            throw error;
+        }
+    },
+    
     transformFromDB(dbStock) {
         const compra = dbStock.compra || {};
         const canal = compra.canal_origen || {};
@@ -573,6 +695,9 @@ const stockStorage = {
             unidadesIniciales: parseInt(dbStock.unidades_iniciales) || 0,
             unidadesDisponibles: parseInt(dbStock.unidades_disponibles) || 0,
             costeUnitarioReal: parseFloat(dbStock.coste_unitario_real) || 0,
+            estado: dbStock.estado || 'disponible',
+            localizacionId: dbStock.localizacion_id || null,
+            localizacion: dbStock.localizacion || null,
             productoName: dbStock.product_name || compra.product_name || 'N/A',
             canalOrigenName: canal.name || 'N/A',
             canalOrigenId: compra.canal_origen_id || null,
@@ -777,6 +902,139 @@ const dashboardStorage = {
             console.error('Error fetching margins:', error);
             return [];
         }
+    }
+};
+
+const localizacionesStorage = {
+    get apiBaseUrl() {
+        if (!window.APP_CONFIG || !window.APP_CONFIG.API_BASE_URL) {
+            console.error('APP_CONFIG.API_BASE_URL is not defined. Make sure config.js is loaded.');
+            throw new Error('API configuration is missing. Please ensure config.js is loaded.');
+        }
+        return window.APP_CONFIG.API_BASE_URL;
+    },
+    
+    async getAll() {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/localizaciones`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const localizaciones = await response.json();
+            
+            return localizaciones.map(loc => this.transformFromDB(loc));
+        } catch (error) {
+            console.error('Error fetching localizaciones:', error);
+            return [];
+        }
+    },
+    
+    async getById(id) {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/localizaciones/${id}`);
+            
+            if (!response.ok) {
+                if (response.status === 404) {
+                    return null;
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const localizacion = await response.json();
+            
+            return this.transformFromDB(localizacion);
+        } catch (error) {
+            console.error('Error fetching localizacion:', error);
+            return null;
+        }
+    },
+    
+    async add(localizacion) {
+        try {
+            const dbLocalizacion = this.transformToDB(localizacion);
+            
+            const response = await fetch(`${this.apiBaseUrl}/localizaciones`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(dbLocalizacion)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+            }
+            
+            const newLocalizacion = await response.json();
+            
+            return this.transformFromDB(newLocalizacion);
+        } catch (error) {
+            console.error('Error adding localizacion:', error);
+            throw error;
+        }
+    },
+    
+    async update(id, updates) {
+        try {
+            const dbUpdates = this.transformToDB(updates);
+            
+            const response = await fetch(`${this.apiBaseUrl}/localizaciones/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(dbUpdates)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+            }
+            
+            const updatedLocalizacion = await response.json();
+            
+            return this.transformFromDB(updatedLocalizacion);
+        } catch (error) {
+            console.error('Error updating localizacion:', error);
+            throw error;
+        }
+    },
+    
+    async delete(id) {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/localizaciones/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Error deleting localizacion:', error);
+            return false;
+        }
+    },
+    
+    transformToDB(localizacion) {
+        return {
+            name: String(localizacion.name || '').trim(),
+            description: localizacion.description ? String(localizacion.description).trim() : null
+        };
+    },
+    
+    transformFromDB(dbLocalizacion) {
+        return {
+            id: dbLocalizacion.id,
+            name: dbLocalizacion.name,
+            description: dbLocalizacion.description || null,
+            createdAt: dbLocalizacion.created_at,
+            updatedAt: dbLocalizacion.updated_at
+        };
     }
 };
 
