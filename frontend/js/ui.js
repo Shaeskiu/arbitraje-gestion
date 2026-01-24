@@ -826,27 +826,23 @@ const ui = {
             if (estado === 'pendiente_recibir') {
                 accionesHtml = `
                     <button onclick="app.recepcionarStock('${stock.id}')" 
-                            class="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50" 
+                            class="text-indigo-600 hover:text-indigo-900 px-3 py-1 rounded hover:bg-indigo-50 text-sm font-medium" 
                             title="Recepcionar stock">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
+                        Recepcionar
                     </button>
                 `;
             } else if (estado === 'recepcionado') {
                 accionesHtml = `
                     <button onclick="app.ponerAVentaStock('${stock.id}')" 
-                            class="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50" 
+                            class="text-green-600 hover:text-green-900 px-3 py-1 rounded hover:bg-green-50 text-sm font-medium" 
                             title="Poner a venta">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
+                        A la venta
                     </button>
                 `;
             } else if (estado === 'disponible' && stock.unidadesDisponibles > 0) {
                 accionesHtml = `
                     <button onclick="app.openVentaModal('${stock.id}', ${stock.unidadesDisponibles})" 
-                            class="text-green-600 hover:text-green-900" 
+                            class="text-green-600 hover:text-green-900 px-3 py-1 rounded hover:bg-green-50 text-sm font-medium" 
                             title="Registrar Venta">
                         Vender
                     </button>

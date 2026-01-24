@@ -13,7 +13,24 @@ const app = {
     salesChartInstance: null,
     marginsChartInstance: null,
     
-    init() {
+    async init() {
+        // Inicializar cliente de Supabase
+        if (window.auth) {
+            window.auth.init();
+        }
+        
+        // Verificar autenticación antes de continuar
+        const isAuthenticated = await this.checkAuth();
+        
+        if (!isAuthenticated) {
+            // Mostrar solo la vista de login
+            this.showLoginView();
+            this.setupLoginForm();
+            return;
+        }
+        
+        // Usuario autenticado, mostrar aplicación
+        this.showAppContent();
         this.setupNavigation();
         this.setupForm();
         this.setupFilters();
@@ -21,6 +38,166 @@ const app = {
             this.allChannels = channels || [];
         });
         this.showView('dashboard');
+    },
+    
+    async checkAuth() {
+        try {
+            if (!window.auth) {
+                console.error('Auth module not loaded');
+                return false;
+            }
+            return await window.auth.isAuthenticated();
+        } catch (error) {
+            console.error('Error checking auth:', error);
+            return false;
+        }
+    },
+    
+    showLoginView() {
+        // Ocultar contenido de la aplicación
+        const appContent = document.getElementById('app-content');
+        if (appContent) {
+            appContent.style.display = 'none';
+        }
+        
+        // Mostrar vista de login
+        const loginView = document.querySelector('[data-view="login"]');
+        if (loginView) {
+            loginView.classList.add('active');
+            loginView.style.display = 'flex';
+        }
+    },
+    
+    showAppContent() {
+        // Ocultar vista de login
+        const loginView = document.querySelector('[data-view="login"]');
+        if (loginView) {
+            loginView.classList.remove('active');
+            loginView.style.display = 'none';
+        }
+        
+        // Mostrar contenido de la aplicación
+        const appContent = document.getElementById('app-content');
+        if (appContent) {
+            appContent.style.display = 'flex';
+        }
+    },
+    
+    setupLoginForm() {
+        const loginForm = document.getElementById('login-form');
+        if (!loginForm) return;
+        
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.handleLogin();
+        });
+    },
+    
+    async handleLogin() {
+        const emailInput = document.getElementById('login-email');
+        const passwordInput = document.getElementById('login-password');
+        const submitButton = document.getElementById('login-submit');
+        const submitText = document.getElementById('login-submit-text');
+        const submitLoading = document.getElementById('login-submit-loading');
+        const errorDiv = document.getElementById('login-error');
+        const errorMessage = document.getElementById('login-error-message');
+        
+        if (!emailInput || !passwordInput || !submitButton) return;
+        
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+        
+        // Validación básica
+        if (!email || !password) {
+            this.showLoginError('Por favor, completa todos los campos');
+            return;
+        }
+        
+        // Deshabilitar botón y mostrar loading
+        submitButton.disabled = true;
+        submitText.classList.add('hidden');
+        submitLoading.classList.remove('hidden');
+        this.hideLoginError();
+        
+        try {
+            const { user, error } = await window.auth.login(email, password);
+            
+            if (error) {
+                // Mostrar error
+                let errorMsg = 'Error al iniciar sesión';
+                if (error.message) {
+                    if (error.message.includes('Invalid login credentials')) {
+                        errorMsg = 'Email o contraseña incorrectos';
+                    } else {
+                        errorMsg = error.message;
+                    }
+                }
+                this.showLoginError(errorMsg);
+                submitButton.disabled = false;
+                submitText.classList.remove('hidden');
+                submitLoading.classList.add('hidden');
+                return;
+            }
+            
+            if (user) {
+                // Login exitoso, mostrar aplicación
+                this.showAppContent();
+                this.setupNavigation();
+                this.setupForm();
+                this.setupFilters();
+                this.loadChannels().then(channels => {
+                    this.allChannels = channels || [];
+                });
+                this.showView('dashboard');
+            }
+        } catch (error) {
+            console.error('Error en handleLogin:', error);
+            this.showLoginError('Error inesperado al iniciar sesión');
+            submitButton.disabled = false;
+            submitText.classList.remove('hidden');
+            submitLoading.classList.add('hidden');
+        }
+    },
+    
+    showLoginError(message) {
+        const errorDiv = document.getElementById('login-error');
+        const errorMessage = document.getElementById('login-error-message');
+        if (errorDiv && errorMessage) {
+            errorMessage.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+    },
+    
+    hideLoginError() {
+        const errorDiv = document.getElementById('login-error');
+        if (errorDiv) {
+            errorDiv.classList.add('hidden');
+        }
+    },
+    
+    async logout() {
+        try {
+            const { error } = await window.auth.logout();
+            if (error) {
+                console.error('Error en logout:', error);
+                alert('Error al cerrar sesión');
+                return;
+            }
+            
+            // Ocultar aplicación y mostrar login
+            this.showLoginView();
+            this.setupLoginForm();
+            
+            // Limpiar campos del formulario
+            const emailInput = document.getElementById('login-email');
+            const passwordInput = document.getElementById('login-password');
+            if (emailInput) emailInput.value = '';
+            if (passwordInput) passwordInput.value = '';
+            this.hideLoginError();
+        } catch (error) {
+            console.error('Error en logout:', error);
+            alert('Error al cerrar sesión');
+        }
     },
     
     
@@ -75,6 +252,14 @@ const app = {
             localizacionForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 this.saveLocalizacion();
+            });
+        }
+        
+        const recepcionarForm = document.getElementById('recepcionar-form');
+        if (recepcionarForm) {
+            recepcionarForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.confirmarRecepcionarStock();
             });
         }
         
@@ -167,7 +352,17 @@ const app = {
         }
     },
     
-    showView(viewName) {
+    async showView(viewName) {
+        // Si intenta mostrar una vista que no sea login, verificar autenticación
+        if (viewName !== 'login') {
+            const isAuthenticated = await this.checkAuth();
+            if (!isAuthenticated) {
+                this.showLoginView();
+                this.setupLoginForm();
+                return;
+            }
+        }
+        
         document.querySelectorAll('[data-view]').forEach(view => {
             view.classList.remove('active');
         });
@@ -1677,7 +1872,93 @@ const app = {
                 return;
             }
             
-            await stockStorage.recepcionar(id);
+            // Cargar localizaciones
+            const localizaciones = await this.loadLocalizaciones();
+            
+            // Si no hay localizaciones, recepcionar sin localización
+            if (!localizaciones || localizaciones.length === 0) {
+                await stockStorage.recepcionar(id, null);
+                this.refreshStock();
+                return;
+            }
+            
+            // Si hay solo una localización, asignarla automáticamente
+            if (localizaciones.length === 1) {
+                await stockStorage.recepcionar(id, localizaciones[0].id);
+                this.refreshStock();
+                return;
+            }
+            
+            // Si hay más de una, mostrar modal para seleccionar
+            this.openRecepcionarModal(id, localizaciones);
+        } catch (error) {
+            console.error('Error recepcionando stock:', error);
+            alert('Error al recepcionar el stock: ' + (error.message || 'Error desconocido'));
+        }
+    },
+    
+    openRecepcionarModal(stockId, localizaciones) {
+        const modal = document.getElementById('recepcionar-modal');
+        const stockIdInput = document.getElementById('recepcionar-stock-id');
+        const localizacionSelect = document.getElementById('recepcionar-localizacion');
+        
+        if (!modal || !stockIdInput || !localizacionSelect) {
+            console.error('Recepcionar modal elements not found');
+            return;
+        }
+        
+        stockIdInput.value = stockId;
+        
+        // Limpiar y poblar el select de localizaciones
+        localizacionSelect.innerHTML = '<option value="">Sin localización</option>';
+        localizaciones.forEach(loc => {
+            const option = document.createElement('option');
+            option.value = loc.id;
+            option.textContent = loc.name;
+            localizacionSelect.appendChild(option);
+        });
+        
+        modal.classList.remove('hidden');
+    },
+    
+    closeRecepcionarModal() {
+        const modal = document.getElementById('recepcionar-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+        
+        const form = document.getElementById('recepcionar-form');
+        if (form) {
+            form.reset();
+        }
+    },
+    
+    closeRecepcionarModalOnOverlay(event) {
+        if (event.target.id === 'recepcionar-modal') {
+            this.closeRecepcionarModal();
+        }
+    },
+    
+    async confirmarRecepcionarStock() {
+        const stockIdInput = document.getElementById('recepcionar-stock-id');
+        const localizacionSelect = document.getElementById('recepcionar-localizacion');
+        
+        if (!stockIdInput || !localizacionSelect) {
+            alert('Error: elementos del formulario no encontrados');
+            return;
+        }
+        
+        const stockId = stockIdInput.value;
+        const localizacionId = localizacionSelect.value || null;
+        
+        if (!stockId) {
+            alert('ID de stock inválido');
+            return;
+        }
+        
+        try {
+            await stockStorage.recepcionar(stockId, localizacionId);
+            this.closeRecepcionarModal();
             this.refreshStock();
         } catch (error) {
             console.error('Error recepcionando stock:', error);

@@ -38,11 +38,96 @@ app.use(cors({
     }
   }
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// ============================================
+// MIDDLEWARE DE AUTENTICACIÓN (OPCIONAL)
+// ============================================
+// Para habilitar la autenticación en el backend, descomenta el código siguiente
+// y añade la variable de entorno ENABLE_BACKEND_AUTH=true
+
+const ENABLE_BACKEND_AUTH = process.env.ENABLE_BACKEND_AUTH === 'true';
+
+/**
+ * Middleware para validar tokens JWT de Supabase
+ * Solo se aplica si ENABLE_BACKEND_AUTH=true
+ */
+const authenticateToken = async (req, res, next) => {
+  if (!ENABLE_BACKEND_AUTH) {
+    // Autenticación deshabilitada, continuar sin validar
+    return next();
+  }
+
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    if (!token) {
+      return res.status(401).json({ error: 'Token de autenticación requerido' });
+    }
+
+    // Validar token con Supabase
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      return res.status(401).json({ error: 'Token inválido o expirado' });
+    }
+
+    // Añadir información del usuario al request para uso posterior
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error('Error en autenticación:', error);
+    return res.status(401).json({ error: 'Error al validar token' });
+  }
+};
+
+// Endpoint para verificar tokens (útil para el frontend)
+app.get('/auth/verify', async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({ valid: false, error: 'Token no proporcionado' });
+    }
+
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      return res.status(401).json({ valid: false, error: 'Token inválido' });
+    }
+
+    return res.json({ valid: true, user: { id: user.id, email: user.email } });
+  } catch (error) {
+    console.error('Error verificando token:', error);
+    return res.status(500).json({ valid: false, error: 'Error al verificar token' });
+  }
+});
+
+// ============================================
+// RUTAS DE API
+// ============================================
+
+// ============================================
+// RUTAS PÚBLICAS (sin autenticación)
+// ============================================
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+// ============================================
+// RUTAS PROTEGIDAS (con autenticación opcional)
+// ============================================
+// Para proteger una ruta, añade authenticateToken como middleware:
+// app.get('/ruta', authenticateToken, async (req, res) => { ... });
+//
+// Ejemplo:
+// app.get('/opportunities', authenticateToken, async (req, res) => {
+//   // Solo usuarios autenticados pueden acceder
+// });
 
 app.get('/opportunities', async (req, res) => {
   try {
@@ -1462,9 +1547,28 @@ app.put('/stock/:id', async (req, res) => {
 app.post('/stock/:id/recepcionar', async (req, res) => {
   try {
     const { id } = req.params;
+    const { localizacion_id } = req.body;
     
     if (!id || typeof id !== 'string' || !isValidUUID(id)) {
       return res.status(400).json({ error: 'Invalid stock ID' });
+    }
+
+    // Validar localizacion_id si se proporciona
+    if (localizacion_id !== undefined && localizacion_id !== null) {
+      if (!isValidUUID(localizacion_id)) {
+        return res.status(400).json({ error: 'Invalid localizacion_id format' });
+      }
+      
+      // Verificar que la localización existe
+      const { data: localizacion, error: locError } = await supabase
+        .from('localizaciones')
+        .select('id')
+        .eq('id', localizacion_id)
+        .single();
+      
+      if (locError || !localizacion) {
+        return res.status(404).json({ error: 'Localizacion not found' });
+      }
     }
 
     // Verificar que el stock existe y está en estado correcto
@@ -1486,9 +1590,15 @@ app.post('/stock/:id/recepcionar', async (req, res) => {
       return res.status(400).json({ error: `Cannot recepcionar stock in estado: ${stockItem.estado}. Must be 'pendiente_recibir'` });
     }
 
+    // Preparar actualización
+    const updateData = { estado: 'recepcionado' };
+    if (localizacion_id !== undefined) {
+      updateData.localizacion_id = localizacion_id || null;
+    }
+
     const { data: updatedStock, error: updateError } = await supabase
       .from('stock')
-      .update({ estado: 'recepcionado' })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -2210,6 +2320,16 @@ app.get('/dashboard/margins', async (req, res) => {
     console.error('Unexpected error:', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
+});
+
+// Middleware para asegurar UTF-8 en todas las respuestas JSON
+app.use((req, res, next) => {
+  const originalJson = res.json;
+  res.json = function(data) {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    return originalJson.call(this, data);
+  };
+  next();
 });
 
 app.listen(PORT, () => {

@@ -1,5 +1,18 @@
 # Fixtures de Desarrollo para Supabase Local
 
+## Crear Usuarios
+
+Para crear usuarios en desarrollo local, ver: [CREAR-USUARIOS-LOCAL.md](../../docs/development/CREAR-USUARIOS-LOCAL.md)
+
+O ejecuta directamente:
+```bash
+docker-compose exec supabase-db psql -U postgres -d postgres -f /tmp/create-user-simple.sql
+```
+
+---
+
+# Fixtures de Desarrollo para Supabase Local
+
 Este directorio contiene datos de ejemplo (fixtures) para poblar la base de datos local durante el desarrollo.
 
 ## 📋 Contenido

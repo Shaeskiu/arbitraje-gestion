@@ -31,7 +31,7 @@ const storage = {
             const response = await fetch(`${this.apiBaseUrl}/opportunities`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json; charset=utf-8'
                 },
                 body: JSON.stringify(dbOpportunity)
             });
@@ -57,7 +57,7 @@ const storage = {
             const response = await fetch(`${this.apiBaseUrl}/opportunities/${id}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json; charset=utf-8'
                 },
                 body: JSON.stringify(dbUpdates)
             });
@@ -308,7 +308,7 @@ const channelStorage = {
             const response = await fetch(`${this.apiBaseUrl}/channels`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json; charset=utf-8'
                 },
                 body: JSON.stringify(dbChannel)
             });
@@ -334,7 +334,7 @@ const channelStorage = {
             const response = await fetch(`${this.apiBaseUrl}/channels/${id}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json; charset=utf-8'
                 },
                 body: JSON.stringify(dbUpdates)
             });
@@ -436,7 +436,7 @@ const comprasStorage = {
             const response = await fetch(`${this.apiBaseUrl}/compras`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json; charset=utf-8'
                 },
                 body: JSON.stringify(compraData)
             });
@@ -497,7 +497,7 @@ const comprasStorage = {
             const response = await fetch(`${this.apiBaseUrl}/compras/multiple`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json; charset=utf-8'
                 },
                 body: JSON.stringify(requestData)
             });
@@ -557,7 +557,7 @@ const comprasStorage = {
             const response = await fetch(`${this.apiBaseUrl}/compras/${id}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json; charset=utf-8'
                 },
                 body: JSON.stringify(payload)
             });
@@ -625,10 +625,19 @@ const stockStorage = {
         }
     },
     
-    async recepcionar(id) {
+    async recepcionar(id, localizacionId = null) {
         try {
+            const body = {};
+            if (localizacionId !== null && localizacionId !== undefined) {
+                body.localizacion_id = localizacionId;
+            }
+            
             const response = await fetch(`${this.apiBaseUrl}/stock/${id}/recepcionar`, {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=utf-8'
+                },
+                body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined
             });
             
             if (!response.ok) {
@@ -668,7 +677,7 @@ const stockStorage = {
             const response = await fetch(`${this.apiBaseUrl}/stock/${id}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json; charset=utf-8'
                 },
                 body: JSON.stringify(updates)
             });
@@ -730,7 +739,7 @@ const ventasStorage = {
             const response = await fetch(`${this.apiBaseUrl}/ventas`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json; charset=utf-8'
                 },
                 body: JSON.stringify({
                     stock_id: stockId,
@@ -821,7 +830,7 @@ const ventasStorage = {
             const response = await fetch(`${this.apiBaseUrl}/ventas/${id}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json; charset=utf-8'
                 },
                 body: JSON.stringify(payload)
             });
@@ -958,7 +967,7 @@ const localizacionesStorage = {
             const response = await fetch(`${this.apiBaseUrl}/localizaciones`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json; charset=utf-8'
                 },
                 body: JSON.stringify(dbLocalizacion)
             });
@@ -984,7 +993,7 @@ const localizacionesStorage = {
             const response = await fetch(`${this.apiBaseUrl}/localizaciones/${id}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json; charset=utf-8'
                 },
                 body: JSON.stringify(dbUpdates)
             });

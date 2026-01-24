@@ -35,16 +35,26 @@ jobs:
 
       - name: Generate config.js
         run: |
-          # Usa el secret API_BASE_URL si está configurado, sino usa el valor por defecto
+          # Usa los secrets si están configurados, sino usa valores por defecto
           API_URL="${{ secrets.API_BASE_URL || 'https://arbitraje-gestion-production.up.railway.app' }}"
+          SUPABASE_URL="${{ secrets.SUPABASE_URL || 'http://localhost:8000' }}"
+          SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' }}"
           cat > frontend/config.js << EOF
           window.APP_CONFIG = {
-              API_BASE_URL: '${API_URL}'
+              API_BASE_URL: '${API_URL}',
+              SUPABASE_URL: '${SUPABASE_URL}',
+              SUPABASE_ANON_KEY: '${SUPABASE_ANON_KEY}'
           };
           EOF
-          echo "✅ config.js generado con API_BASE_URL=${API_URL}"
+          echo "✅ config.js generado con API_BASE_URL=${API_URL}, SUPABASE_URL=${SUPABASE_URL}"
           if [ -z "${{ secrets.API_BASE_URL }}" ]; then
-            echo "⚠️  Usando valor por defecto. Configura el secret API_BASE_URL para usar tu URL personalizada."
+            echo "⚠️  Usando valor por defecto para API_BASE_URL. Configura el secret API_BASE_URL para usar tu URL personalizada."
+          fi
+          if [ -z "${{ secrets.SUPABASE_URL }}" ]; then
+            echo "⚠️  Usando valor por defecto para SUPABASE_URL. Configura el secret SUPABASE_URL para producción."
+          fi
+          if [ -z "${{ secrets.SUPABASE_ANON_KEY }}" ]; then
+            echo "⚠️  Usando valor por defecto para SUPABASE_ANON_KEY. Configura el secret SUPABASE_ANON_KEY para producción."
           fi
 
       - name: Setup Pages

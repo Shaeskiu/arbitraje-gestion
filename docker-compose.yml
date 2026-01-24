@@ -64,30 +64,30 @@ services:
       - arbitraje-network
     restart: unless-stopped
 
-  # GoTrue - Autenticación (deshabilitado temporalmente para simplificar)
-  # auth:
-  #   image: supabase/gotrue:v2.99.0
-  #   container_name: arbitraje-auth
-  #   environment:
-  #     GOTRUE_API_HOST: 0.0.0.0
-  #     GOTRUE_API_PORT: 9999
-  #     API_EXTERNAL_URL: http://localhost:8000
-  #     GOTRUE_DB_DRIVER: postgres
-  #     GOTRUE_DB_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}@supabase-db:5432/postgres
-  #     GOTRUE_SITE_URL: http://localhost:3000
-  #     GOTRUE_URI_ALLOW_LIST: "*"
-  #     GOTRUE_DISABLE_SIGNUP: "false"
-  #     GOTRUE_JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters-long}
-  #     GOTRUE_JWT_EXP: ${JWT_EXP:-3600}
-  #     GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
-  #     GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
-  #     GOTRUE_MAILER_AUTOCONFIRM: "true"
-  #   depends_on:
-  #     supabase-db:
-  #       condition: service_healthy
-  #   networks:
-  #     - arbitraje-network
-  #   restart: unless-stopped
+  # GoTrue - Autenticación
+  auth:
+    image: supabase/gotrue:v2.99.0
+    container_name: arbitraje-auth
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: http://localhost:8000
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}@supabase-db:5432/postgres?sslmode=disable&search_path=auth
+      GOTRUE_SITE_URL: http://localhost:3000
+      GOTRUE_URI_ALLOW_LIST: "*"
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      GOTRUE_JWT_EXP: ${JWT_EXP:-3600}
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    networks:
+      - arbitraje-network
+    restart: unless-stopped
 
   # Backend API
   backend:

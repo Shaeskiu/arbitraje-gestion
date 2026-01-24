@@ -6,6 +6,7 @@
     <title>Gestión de Arbitraje Comercial</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="icon" href="./assets/favicon.png" />
     <style>
         [data-view] {
@@ -17,13 +18,70 @@
     </style>
 </head>
 <body class="bg-gray-50 h-screen overflow-hidden">
-    <div class="flex h-screen">
-        <aside class="w-64 bg-white shadow-lg border-r border-gray-200">
-            <div class="p-6">
+    <!-- Vista de Login -->
+    <div data-view="login" class="flex items-center justify-center min-h-screen bg-gray-50">
+        <div class="max-w-md w-full space-y-8 p-8">
+            <div class="text-center">
+                <img src="./assets/logo.png" alt="Arbitraje Gestión" class="mx-auto h-16 mb-4" />
+                <h2 class="text-3xl font-bold text-gray-900">Iniciar Sesión</h2>
+                <p class="mt-2 text-sm text-gray-600">Ingresa tus credenciales para acceder</p>
+            </div>
+            <form id="login-form" class="mt-8 space-y-6 bg-white p-8 rounded-lg shadow-md">
+                <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+                    <span class="block sm:inline" id="login-error-message"></span>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1">
+                            Email
+                        </label>
+                        <input 
+                            id="login-email" 
+                            name="email" 
+                            type="email" 
+                            required 
+                            autocomplete="email"
+                            class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
+                            placeholder="tu@email.com"
+                        />
+                    </div>
+                    <div>
+                        <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">
+                            Contraseña
+                        </label>
+                        <input 
+                            id="login-password" 
+                            name="password" 
+                            type="password" 
+                            required 
+                            autocomplete="current-password"
+                            class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
+                            placeholder="••••••••"
+                        />
+                    </div>
+                </div>
+                <div>
+                    <button 
+                        type="submit" 
+                        id="login-submit"
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <span id="login-submit-text">Iniciar Sesión</span>
+                        <span id="login-submit-loading" class="hidden">Iniciando sesión...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Contenido principal de la aplicación (solo visible si está autenticado) -->
+    <div id="app-content" class="flex h-screen" style="display: none;">
+        <aside class="w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col">
+            <div class="p-6 flex-1 flex flex-col">
                 <button onclick="app.showView('dashboard')" class="cursor-pointer hover:opacity-80 transition-opacity focus:outline-none">
                     <img src="./assets/logo.png" alt="Arbitraje Gestión" class="h-15" />
                 </button>
-                <nav class="space-y-1">
+                <nav class="space-y-1 flex-1 flex flex-col">
                     <button data-nav="dashboard" class="nav-link w-full text-left px-4 py-3 text-sm font-medium bg-indigo-50 text-indigo-700 rounded-md transition-colors">
                         Dashboard
                     </button>
@@ -62,6 +120,13 @@
                                 Localizaciones
                             </button>
                         </div>
+                    </div>
+                    
+                    <!-- Botón de Logout -->
+                    <div class="mt-auto pt-4 border-t border-gray-200">
+                        <button onclick="app.logout()" class="w-full text-left px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md transition-colors">
+                            Cerrar Sesión
+                        </button>
                     </div>
                 </nav>
             </div>
@@ -831,6 +896,40 @@
         </div>
     </div>
 
+    <!-- Recepcionar Stock Modal -->
+    <div id="recepcionar-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center" onclick="app.closeRecepcionarModalOnOverlay(event)">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" onclick="event.stopPropagation()">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-900">Recepcionar Stock</h2>
+                    <button onclick="app.closeRecepcionarModal()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <form id="recepcionar-form" class="space-y-4">
+                    <input type="hidden" id="recepcionar-stock-id">
+                    <div>
+                        <label for="recepcionar-localizacion" class="block text-sm font-medium text-gray-700 mb-1">Localización (opcional)</label>
+                        <select id="recepcionar-localizacion" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <option value="">Sin localización</option>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">Selecciona dónde se recepciona el stock</p>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="app.closeRecepcionarModal()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                            Recepcionar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Venta Modal -->
     <div id="venta-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center" onclick="app.closeVentaModalOnOverlay(event)">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" onclick="event.stopPropagation()">
@@ -877,6 +976,7 @@
         </div>
     </div>
 
+    <script src="js/auth.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/arbitrage.js"></script>
     <script src="js/ui.js"></script>
@@ -889,6 +989,11 @@
             const errorMsg = 'Error: Configuration file is missing. Please create config.js from config.example.js in the frontend directory.';
             alert(errorMsg);
             document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif;"><h1 style="color: red;">Configuration Error</h1><p>' + errorMsg + '</p></div>';
+        }
+        
+        // Validar también configuración de Supabase
+        if (!window.APP_CONFIG || !window.APP_CONFIG.SUPABASE_URL || !window.APP_CONFIG.SUPABASE_ANON_KEY) {
+            console.warn('Configuración de Supabase no encontrada. La autenticación puede no funcionar correctamente.');
         }
     </script>
 </body>

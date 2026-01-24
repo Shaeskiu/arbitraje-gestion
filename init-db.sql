@@ -429,6 +429,16 @@ ALTER COLUMN product_name SET NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_ventas_product_name ON ventas(product_name);
 
 -- ============================================
+-- CREAR ESQUEMA AUTH PARA GOTRUE
+-- ============================================
+
+-- Crear esquema auth si no existe
+CREATE SCHEMA IF NOT EXISTS auth;
+
+-- Conceder permisos al esquema auth
+GRANT USAGE ON SCHEMA auth TO postgres, anon, authenticated;
+
+-- ============================================
 -- CREAR ROLES PARA SUPABASE
 -- ============================================
 
