@@ -413,6 +413,8 @@ const app = {
     },
     
     async showView(viewName) {
+        console.log('showView called with:', viewName);
+        
         // Si intenta mostrar una vista que no sea login, verificar autenticación
         if (viewName !== 'login') {
             const isAuthenticated = await this.checkAuth();
@@ -423,14 +425,103 @@ const app = {
             }
         }
         
+        // Ocultar todas las vistas
         document.querySelectorAll('[data-view]').forEach(view => {
             view.classList.remove('active');
+            // NO forzar display: none con inline styles, dejar que el CSS lo maneje
+            // view.style.display = 'none';
         });
         
+        // Mostrar solo la vista seleccionada
         const view = document.querySelector(`[data-view="${viewName}"]`);
-        if (view) {
-            view.classList.add('active');
+        if (!view) {
+            console.error(`Vista "${viewName}" no encontrada`);
+            return;
         }
+        
+        console.log('Vista encontrada:', viewName, {
+            element: view,
+            className: view.className,
+            parentElement: view.parentElement ? view.parentElement.tagName : 'null',
+            isInMain: view.closest('main') !== null
+        });
+        
+        // Verificar que la vista esté dentro del main
+        const main = document.querySelector('main');
+        if (main && !main.contains(view)) {
+            console.warn(`Vista "${viewName}" no está dentro del main. Moviéndola...`);
+            main.appendChild(view);
+        }
+        
+        // Añadir clase active y forzar display inmediatamente
+        view.classList.add('active');
+        
+        const computedStyle = window.getComputedStyle(view);
+        const rect = view.getBoundingClientRect();
+        console.log('Vista activada:', viewName, {
+            hasActiveClass: view.classList.contains('active'),
+            computedDisplay: computedStyle.display,
+            computedVisibility: computedStyle.visibility,
+            computedHeight: computedStyle.height,
+            computedWidth: computedStyle.width,
+            computedOverflow: computedStyle.overflow,
+            computedOpacity: computedStyle.opacity,
+            computedZIndex: computedStyle.zIndex,
+            // DIMENSIONES REALES (esto es lo importante)
+            realHeight: rect.height + 'px',
+            realWidth: rect.width + 'px',
+            realTop: rect.top + 'px',
+            realLeft: rect.left + 'px',
+            innerHTML: view.innerHTML ? view.innerHTML.substring(0, 200) + '...' : 'empty',
+            childrenCount: view.children.length,
+            firstChild: view.firstElementChild ? view.firstElementChild.tagName + '.' + view.firstElementChild.className : 'none',
+            parentHeight: view.parentElement ? window.getComputedStyle(view.parentElement).height : 'no parent',
+            parentRealHeight: view.parentElement ? view.parentElement.getBoundingClientRect().height + 'px' : 'no parent'
+        });
+        
+        // Verificar el contenedor interno si existe
+        if (view.firstElementChild) {
+            const firstChild = view.firstElementChild;
+            const childStyle = window.getComputedStyle(firstChild);
+            const childRect = firstChild.getBoundingClientRect();
+            console.log('Primer hijo de la vista:', {
+                tagName: firstChild.tagName,
+                className: firstChild.className,
+                display: childStyle.display,
+                computedHeight: childStyle.height,
+                computedWidth: childStyle.width,
+                // DIMENSIONES REALES
+                realHeight: childRect.height + 'px',
+                realWidth: childRect.width + 'px',
+                visibility: childStyle.visibility,
+                opacity: childStyle.opacity
+            });
+            
+            // Si las dimensiones reales son 0, hay un problema
+            if (rect.height === 0 || rect.width === 0) {
+                console.error('⚠️ PROBLEMA DETECTADO: La vista tiene dimensiones reales 0x0!', {
+                    viewHeight: rect.height,
+                    viewWidth: rect.width,
+                    parentHeight: view.parentElement ? view.parentElement.getBoundingClientRect().height : 'no parent',
+                    parentComputedHeight: view.parentElement ? window.getComputedStyle(view.parentElement).height : 'no parent'
+                });
+            }
+            
+            if (childRect.height === 0 || childRect.width === 0) {
+                console.error('⚠️ PROBLEMA DETECTADO: El primer hijo tiene dimensiones reales 0x0!', {
+                    childHeight: childRect.height,
+                    childWidth: childRect.width,
+                    parentHeight: rect.height,
+                    parentComputedHeight: computedStyle.height
+                });
+            }
+        }
+        // NO forzar display con inline styles, dejar que el CSS lo maneje
+        // if (viewName === 'login' || viewName === 'new') {
+        //     view.style.display = 'flex';
+        // } else {
+        //     view.style.display = 'block';
+        // }
         
         document.querySelectorAll('.nav-link').forEach(link => {
             link.classList.remove('bg-indigo-50', 'text-indigo-700');
@@ -461,12 +552,15 @@ const app = {
             this.initializeOpportunityForm();
         } else if (viewName === 'channel-form') {
             this.initializeChannelForm();
+        } else if (viewName === 'localizacion-form') {
+            // No necesita inicialización especial, pero asegurarse de que se muestre
         }
     },
     
     async initializeOpportunityForm(isEdit = false) {
         const form = document.getElementById('opportunity-form');
         if (!form) {
+            console.error('Form opportunity-form not found');
             return;
         }
         
@@ -481,9 +575,33 @@ const app = {
             ui.updateFormCalculations();
         }
         
+        // Esperar un momento para asegurar que el DOM esté listo
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Cargar canales
         await this.loadChannels();
+        console.log('Canales cargados:', this.allChannels);
+        
+        // Verificar que los selects existan
+        const originSelect = document.getElementById('origin-channel-select');
+        const destSelect = document.getElementById('dest-channel-select');
+        
+        if (!originSelect || !destSelect) {
+            console.error('Channel selects not found:', { originSelect, destSelect });
+            // Reintentar después de un momento
+            setTimeout(async () => {
+                await this.loadChannels();
+                if (this.allChannels && this.allChannels.length > 0) {
+                    ui.populateChannelSelects(this.allChannels);
+                }
+            }, 500);
+            return;
+        }
+        
         if (this.allChannels && this.allChannels.length > 0) {
             ui.populateChannelSelects(this.allChannels);
+        } else {
+            console.warn('No hay canales disponibles');
         }
     },
     
@@ -648,9 +766,13 @@ const app = {
     },
     
     showLocalizacionForm() {
+        console.log('showLocalizacionForm called');
         const form = document.getElementById('localizacion-form');
         if (form) {
             form.reset();
+            console.log('Form encontrado y reseteado');
+        } else {
+            console.error('Form localizacion-form no encontrado');
         }
         const localizacionIdInput = document.getElementById('localizacion-id');
         if (localizacionIdInput) {
@@ -659,7 +781,11 @@ const app = {
         const title = document.getElementById('localizacion-form-title');
         if (title) {
             title.textContent = 'Nueva Localización';
+            console.log('Título actualizado');
+        } else {
+            console.error('Título localizacion-form-title no encontrado');
         }
+        console.log('Llamando a showView("localizacion-form")');
         this.showView('localizacion-form');
     },
     
@@ -1548,6 +1674,8 @@ const app = {
     },
     
     async openCompraModal(opportunityId, canalOrigenId, estimatedPrice, productName = null) {
+        console.log('openCompraModal called with:', { opportunityId, canalOrigenId, estimatedPrice, productName });
+        
         const modal = document.getElementById('compra-modal');
         const opportunityIdInput = document.getElementById('compra-opportunity-id');
         const canalOrigenIdInput = document.getElementById('compra-canal-origen-id');
@@ -1558,7 +1686,16 @@ const app = {
         const itemsContainer = document.getElementById('compra-items-container');
         
         if (!modal || !opportunityIdInput || !canalOrigenIdInput || !productNameInput || !productNameDisplay || !precioBaseInput || !fechaInput || !itemsContainer) {
-            console.error('Compra modal elements not found');
+            console.error('Compra modal elements not found', {
+                modal: !!modal,
+                opportunityIdInput: !!opportunityIdInput,
+                canalOrigenIdInput: !!canalOrigenIdInput,
+                productNameInput: !!productNameInput,
+                productNameDisplay: !!productNameDisplay,
+                precioBaseInput: !!precioBaseInput,
+                fechaInput: !!fechaInput,
+                itemsContainer: !!itemsContainer
+            });
             return;
         }
         
@@ -1587,13 +1724,24 @@ const app = {
         itemsContainer.innerHTML = '';
         this.addCompraRow();
         
+        // SIEMPRE mover el modal al body para evitar problemas con parents ocultos
+        const currentParent = modal.parentElement;
+        if (currentParent && currentParent !== document.body) {
+            console.warn('Modal de compra está dentro de', currentParent.tagName || currentParent.id || currentParent.className, ', moviéndolo al body');
+            document.body.appendChild(modal);
+        }
+        
+        // Remover clase hidden y forzar display con !important
         modal.classList.remove('hidden');
+        modal.style.cssText = 'display: flex !important; position: fixed !important; z-index: 9999 !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100vw !important; height: 100vh !important; margin: 0 !important; padding: 0 !important;';
     },
     
     closeCompraModal() {
         const modal = document.getElementById('compra-modal');
         if (modal) {
             modal.classList.add('hidden');
+            // Limpiar estilos inline para que la clase hidden funcione
+            modal.style.cssText = 'display: none !important;';
         }
         
         const form = document.getElementById('compra-form');
@@ -1820,6 +1968,8 @@ const app = {
     },
     
     async openVentaModal(stockId, unidadesDisponibles, estimatedPrice = null) {
+        console.log('openVentaModal called with:', { stockId, unidadesDisponibles, estimatedPrice });
+        
         const modal = document.getElementById('venta-modal');
         const stockIdInput = document.getElementById('venta-stock-id');
         const canalDestinoSelect = document.getElementById('venta-canal-destino');
@@ -1829,7 +1979,14 @@ const app = {
         const fechaInput = document.getElementById('venta-fecha');
         
         if (!modal || !stockIdInput || !canalDestinoSelect || !precioUnitarioInput || !unidadesInput || !fechaInput) {
-            console.error('Venta modal elements not found');
+            console.error('Venta modal elements not found', {
+                modal: !!modal,
+                stockIdInput: !!stockIdInput,
+                canalDestinoSelect: !!canalDestinoSelect,
+                precioUnitarioInput: !!precioUnitarioInput,
+                unidadesInput: !!unidadesInput,
+                fechaInput: !!fechaInput
+            });
             return;
         }
         
@@ -1847,13 +2004,49 @@ const app = {
                 this.allChannels.map(ch => `<option value="${ch.id}">${ui.escapeHtml(ch.name)}</option>`).join('');
         }
         
+        // SIEMPRE mover el modal al body para evitar problemas con parents ocultos
+        const currentParent = modal.parentElement;
+        if (currentParent && currentParent !== document.body) {
+            console.warn('Modal está dentro de', currentParent.tagName || currentParent.id || currentParent.className, ', moviéndolo al body');
+            document.body.appendChild(modal);
+        }
+        
+        // Remover clase hidden
         modal.classList.remove('hidden');
+        
+        // Forzar estilos con !important - incluyendo dimensiones explícitas
+        modal.style.cssText = 'display: flex !important; position: fixed !important; z-index: 9999 !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100vw !important; height: 100vh !important; margin: 0 !important; padding: 0 !important;';
+        
+        // Forzar que el contenido también tenga dimensiones
+        const modalContent = modal.querySelector('.card');
+        if (modalContent) {
+            modalContent.style.cssText = 'width: auto !important; min-width: 300px !important; max-width: 28rem !important; height: auto !important;';
+        }
+        
+        // Verificar dimensiones del modal después de aplicar estilos
+        setTimeout(() => {
+            const rect = modal.getBoundingClientRect();
+            console.log('Modal dimensions after fix:', rect.width, 'x', rect.height);
+            if (rect.width === 0 || rect.height === 0) {
+                console.error('Modal aún tiene dimensiones 0x0. Verificando parent...');
+                console.log('Modal parent:', modal.parentElement ? modal.parentElement.tagName + ' ' + modal.parentElement.className : 'null');
+                const parentStyle = modal.parentElement ? window.getComputedStyle(modal.parentElement) : null;
+                if (parentStyle) {
+                    console.log('Parent display:', parentStyle.display);
+                    console.log('Parent overflow:', parentStyle.overflow);
+                    console.log('Parent height:', parentStyle.height);
+                    console.log('Parent width:', parentStyle.width);
+                }
+            }
+        }, 100);
     },
     
     closeVentaModal() {
         const modal = document.getElementById('venta-modal');
         if (modal) {
             modal.classList.add('hidden');
+            // Limpiar estilos inline para que la clase hidden funcione
+            modal.style.cssText = 'display: none !important;';
         }
         
         const form = document.getElementById('venta-form');
@@ -1967,6 +2160,12 @@ const app = {
             return;
         }
         
+        // SIEMPRE mover el modal al body para evitar problemas con parents ocultos
+        const currentParent = modal.parentElement;
+        if (currentParent && currentParent !== document.body) {
+            document.body.appendChild(modal);
+        }
+        
         stockIdInput.value = stockId;
         
         // Limpiar y poblar el select de localizaciones
@@ -1978,13 +2177,17 @@ const app = {
             localizacionSelect.appendChild(option);
         });
         
+        // Remover clase hidden y forzar display con !important
         modal.classList.remove('hidden');
+        modal.style.cssText = 'display: flex !important; position: fixed !important; z-index: 9999 !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100vw !important; height: 100vh !important; margin: 0 !important; padding: 0 !important;';
     },
     
     closeRecepcionarModal() {
         const modal = document.getElementById('recepcionar-modal');
         if (modal) {
             modal.classList.add('hidden');
+            // Limpiar estilos inline para que la clase hidden funcione
+            modal.style.cssText = 'display: none !important;';
         }
         
         const form = document.getElementById('recepcionar-form');
@@ -2276,6 +2479,9 @@ const app = {
         }
     }
 };
+
+// Exponer app globalmente para que los onclick funcionen
+window.app = app;
 
 document.addEventListener('DOMContentLoaded', () => {
     app.init();

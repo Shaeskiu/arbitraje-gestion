@@ -49,10 +49,72 @@
             min-height: 100vh;
         }
         
+        /* SIMPLIFICADO: Todas las vistas ocultas por defecto */
         [data-view] {
-            display: none;
+            display: none !important;
         }
+        
+        /* SIMPLIFICADO: Vistas activas se muestran */
         [data-view].active {
+            display: block !important;
+        }
+        
+        /* Vistas especiales que usan flex */
+        [data-view="login"].active {
+            display: flex !important;
+        }
+        
+        [data-view="new"].active {
+            display: flex !important;
+        }
+        
+        /* Asegurar que las vistas dentro de main se muestren correctamente */
+        main [data-view].active {
+            display: block !important;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        main [data-view="new"].active {
+            display: flex !important;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        /* Asegurar que main tenga altura definida */
+        #app-content main {
+            height: 100%;
+            min-height: 0;
+            flex: 1;
+        }
+        
+        /* Asegurar que los formularios de canal y localización se muestren correctamente */
+        main [data-view="channel-form"].active,
+        main [data-view="localizacion-form"].active {
+            display: block !important;
+            width: 100%;
+            height: 100% !important;
+            min-height: 100% !important;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            position: relative;
+        }
+        
+        /* Asegurar que el contenedor interno tenga altura */
+        main [data-view="localizacion-form"].active > div {
+            height: 100% !important;
+            min-height: 100% !important;
+            display: block;
+        }
+        
+        main [data-view="channel-form"].active > div {
+            height: 100% !important;
+            min-height: 100% !important;
             display: block;
         }
         
@@ -236,14 +298,7 @@
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
         
-        /* Efectos de transición para vistas */
-        [data-view] {
-            transition: opacity 0.3s ease, transform 0.3s ease;
-        }
-        
-        [data-view].active {
-            animation: fadeIn 0.3s ease-out;
-        }
+        /* Sin animaciones - simplificado para evitar problemas */
         
         /* Mejoras en tablas */
         table tbody tr {
@@ -310,8 +365,8 @@
             }
         }
         
-        /* Formulario de oportunidad compacto */
-        [data-view="new"] {
+        /* Formulario de oportunidad compacto - solo cuando está activo */
+        [data-view="new"].active {
             display: flex;
             flex-direction: column;
             height: 100%;
@@ -319,7 +374,7 @@
             overflow: hidden;
         }
         
-        [data-view="new"] .card {
+        [data-view="new"].active .card {
             display: flex;
             flex-direction: column;
             height: 100%;
@@ -327,7 +382,7 @@
             overflow: hidden;
         }
         
-        [data-view="new"] form {
+        [data-view="new"].active form {
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
@@ -339,29 +394,29 @@
         
         /* Hacer que el formulario sea más compacto en pantallas pequeñas */
         @media (max-height: 900px) {
-            [data-view="new"] form {
+            [data-view="new"].active form {
                 gap: 0.625rem;
                 padding: 0.75rem;
             }
         }
         
         /* Ajustar main cuando está en vista new */
-        main:has([data-view="new"]) {
+        main:has([data-view="new"].active) {
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
         
-        /* Asegurar que el formulario sea visible sin scroll cuando sea posible */
-        @media (min-height: 800px) {
-            [data-view="new"] form {
-                overflow-y: visible;
-            }
+        /* Asegurar que la vista new ocupe toda la altura disponible */
+        [data-view="new"].active {
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
         }
         
-        @media (max-height: 700px) {
-            [data-view="new"] form {
-                overflow-y: auto;
-                max-height: calc(100vh - 200px);
-            }
+        /* Asegurar que el formulario siempre tenga scroll si es necesario */
+        [data-view="new"].active form {
+            overflow-y: auto !important;
         }
         
         /* Secciones colapsables */
@@ -386,31 +441,31 @@
                 max-height: 100px;
             }
             
-            [data-view="new"] form {
+            [data-view="new"].active form {
                 padding: 0.75rem;
                 gap: 0.625rem;
             }
         }
         
         /* Inputs más compactos */
-        [data-view="new"] .input-field {
+        [data-view="new"].active .input-field {
             padding: 0.5rem 0.75rem;
             font-size: 0.875rem;
         }
         
-        [data-view="new"] label {
+        [data-view="new"].active label {
             font-size: 0.8125rem;
             margin-bottom: 0.25rem;
         }
         
         /* Reducir espacios en secciones colapsables */
-        [data-view="new"] .border-t {
+        [data-view="new"].active .border-t {
             margin-top: 0.5rem;
             padding-top: 0.5rem;
         }
         
         /* Botones de secciones colapsables más compactos */
-        [data-view="new"] button[onclick*="toggle"] {
+        [data-view="new"].active button[onclick*="toggle"] {
             padding: 0.25rem 0;
         }
     </style>
@@ -554,7 +609,7 @@
             </svg>
         </button>
         
-        <main class="flex-1 overflow-hidden p-4 md:p-6 pt-16 md:pt-6">
+        <main class="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 pt-16 md:pt-6">
         <div data-view="opportunities" class="w-full h-full">
             <div class="w-full h-full">
                 <div class="mb-6">
@@ -606,7 +661,7 @@
             </div>
         </div>
 
-        <div data-view="dashboard" class="active w-full h-full">
+        <div data-view="dashboard" class="w-full h-full">
             <div class="space-y-6">
                 <h2 class="text-2xl font-display font-bold text-gray-900">Dashboard de Negocio</h2>
                 
@@ -673,7 +728,7 @@
                 <div class="p-4 md:p-5 flex-shrink-0 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
                     <h2 class="text-xl md:text-2xl font-display font-bold text-gray-900" id="form-title">Nueva Oportunidad</h2>
                 </div>
-                <form id="opportunity-form" class="flex-1 overflow-y-auto">
+                <form id="opportunity-form" class="flex-1 overflow-y-auto p-4 md:p-5 space-y-4">
                         <input type="hidden" id="opportunity-id">
                         
                         <div>
@@ -953,8 +1008,9 @@
             </div>
         </div>
 
-        <div data-view="channels" class="w-full">
-            <div class="mb-6">
+        <div data-view="channels" class="w-full h-full">
+            <div class="w-full h-full">
+                <div class="mb-6">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold text-gray-900">Gestión de Canales</h2>
                     <button onclick="app.showChannelForm()" class="btn-primary text-sm">
@@ -981,10 +1037,12 @@
                     </div>
                 </div>
             </div>
+            </div>
         </div>
 
-        <div data-view="localizaciones" class="w-full">
-            <div class="mb-6">
+        <div data-view="localizaciones" class="w-full h-full">
+            <div class="w-full h-full">
+                <div class="mb-6">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold text-gray-900">Gestión de Localizaciones</h2>
                     <button onclick="app.showLocalizacionForm()" class="btn-primary text-sm">
@@ -1012,8 +1070,9 @@
             </div>
         </div>
 
-        <div data-view="stock" class="w-full">
-            <div class="card">
+        <div data-view="stock" class="w-full h-full">
+            <div class="w-full h-full">
+                <div class="card">
                 <div class="p-6">
                     <h2 class="text-2xl font-display font-bold text-gray-900 mb-6">Stock Disponible</h2>
                     <!-- Cards para móvil -->
@@ -1040,10 +1099,12 @@
                     </div>
                 </div>
             </div>
+            </div>
         </div>
 
-        <div data-view="compras" class="w-full">
-            <div class="card">
+        <div data-view="compras" class="w-full h-full">
+            <div class="w-full h-full">
+                <div class="card">
                 <div class="p-6">
                     <h2 class="text-2xl font-display font-bold text-gray-900 mb-6">Compras</h2>
                     <!-- Cards para móvil -->
@@ -1068,10 +1129,12 @@
                     </div>
                 </div>
             </div>
+            </div>
         </div>
 
-        <div data-view="ventas" class="w-full">
-            <div class="card">
+        <div data-view="ventas" class="w-full h-full">
+            <div class="w-full h-full">
+                <div class="card">
                 <div class="p-6">
                     <h2 class="text-2xl font-display font-bold text-gray-900 mb-6">Ventas</h2>
                     <!-- Cards para móvil -->
@@ -1097,11 +1160,12 @@
                     </div>
                 </div>
             </div>
+            </div>
         </div>
 
         <!-- Detalle de Venta -->
-        <div data-view="venta-detail" class="w-full">
-            <div class="bg-white shadow rounded-lg">
+        <div data-view="venta-detail" class="w-full h-full">
+            <div class="bg-white shadow rounded-lg h-full overflow-y-auto">
                 <div class="p-6">
                     <div class="flex justify-between items-start mb-6">
                         <h2 class="text-2xl font-bold text-gray-900" id="venta-detail-product-name">-</h2>
@@ -1205,8 +1269,8 @@
             </div>
         </div>
 
-        <div data-view="channel-form" class="w-full">
-            <div class="bg-white shadow rounded-lg">
+        <div data-view="channel-form" class="w-full h-full">
+            <div class="bg-white shadow rounded-lg h-full overflow-y-auto">
                 <div class="p-6">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6" id="channel-form-title">Nuevo Canal</h2>
                     <form id="channel-form" class="space-y-6">
@@ -1249,8 +1313,8 @@
             </div>
         </div>
 
-        <div data-view="localizacion-form" class="w-full">
-            <div class="bg-white shadow rounded-lg">
+        <div data-view="localizacion-form" class="w-full h-full">
+            <div class="bg-white shadow rounded-lg h-full overflow-y-auto">
                 <div class="p-6">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6" id="localizacion-form-title">Nueva Localización</h2>
                     <form id="localizacion-form" class="space-y-6">

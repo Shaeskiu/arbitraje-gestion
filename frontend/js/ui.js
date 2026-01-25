@@ -402,8 +402,17 @@ const ui = {
     },
     
     updateFormCalculations() {
-        const purchasePrice = parseFloat(document.getElementById('origin-price').value) || 0;
-        const estimatedSalePrice = parseFloat(document.getElementById('dest-price').value) || 0;
+        const originPriceEl = document.getElementById('origin-price');
+        const destPriceEl = document.getElementById('dest-price');
+        
+        // Verificar que los elementos existan
+        if (!originPriceEl || !destPriceEl) {
+            console.warn('Form calculation elements not found');
+            return;
+        }
+        
+        const purchasePrice = parseFloat(originPriceEl.value) || 0;
+        const estimatedSalePrice = parseFloat(destPriceEl.value) || 0;
         
         const tempOpportunity = {
             originPrice: purchasePrice,
@@ -413,20 +422,33 @@ const ui = {
         
         const calc = arbitrage.calculate(tempOpportunity);
         
-        document.getElementById('calc-margin-bruto').textContent = arbitrage.formatCurrency(calc.estimated.grossMargin);
-        document.getElementById('calc-costes-totales').textContent = arbitrage.formatCurrency(calc.estimated.totalCosts);
-        document.getElementById('calc-margin-neto').textContent = arbitrage.formatCurrency(calc.estimated.netMargin);
-        document.getElementById('calc-rentabilidad').textContent = arbitrage.formatPercent(calc.estimated.profitability);
-        
+        const marginBrutoEl = document.getElementById('calc-margin-bruto');
+        const costesTotalesEl = document.getElementById('calc-costes-totales');
         const netMarginEl = document.getElementById('calc-margin-neto');
-        netMarginEl.className = netMarginEl.className.replace(/text-\w+-\d+/, '');
-        netMarginEl.classList.add(calc.estimated.netMargin >= 0 ? 'text-green-600' : 'text-red-600');
-        
         const rentEl = document.getElementById('calc-rentabilidad');
-        rentEl.className = rentEl.className.replace(/text-\w+-\d+/, '');
-        rentEl.classList.add(calc.estimated.profitability >= 0 ? 'text-green-600' : 'text-red-600');
         
-        this.updateCostsBreakdown('costs-breakdown-content', 'costs-total', calc.estimated.costsBreakdown);
+        if (marginBrutoEl) {
+            marginBrutoEl.textContent = arbitrage.formatCurrency(calc.estimated.grossMargin);
+        }
+        if (costesTotalesEl) {
+            costesTotalesEl.textContent = arbitrage.formatCurrency(calc.estimated.totalCosts);
+        }
+        if (netMarginEl) {
+            netMarginEl.textContent = arbitrage.formatCurrency(calc.estimated.netMargin);
+            netMarginEl.className = netMarginEl.className.replace(/text-\w+-\d+/, '');
+            netMarginEl.classList.add(calc.estimated.netMargin >= 0 ? 'text-green-600' : 'text-red-600');
+        }
+        if (rentEl) {
+            rentEl.textContent = arbitrage.formatPercent(calc.estimated.profitability);
+            rentEl.className = rentEl.className.replace(/text-\w+-\d+/, '');
+            rentEl.classList.add(calc.estimated.profitability >= 0 ? 'text-green-600' : 'text-red-600');
+        }
+        
+        // Solo actualizar costs-breakdown si el elemento existe
+        const costsBreakdownContent = document.getElementById('costs-breakdown-content');
+        if (costsBreakdownContent) {
+            this.updateCostsBreakdown('costs-breakdown-content', 'costs-total', calc.estimated.costsBreakdown);
+        }
         
         // Ocultar sección de cálculos reales ya que no se usa en el formulario
         const realSection = document.getElementById('calc-real-section');
@@ -438,6 +460,12 @@ const ui = {
     updateCostsBreakdown(contentId, totalId, breakdown) {
         const content = document.getElementById(contentId);
         const total = document.getElementById(totalId);
+        
+        // Verificar que los elementos existan antes de usarlos
+        if (!content || !total) {
+            console.warn(`Elements not found: contentId=${contentId}, totalId=${totalId}`);
+            return;
+        }
         
         if (!breakdown || breakdown.length === 0) {
             content.innerHTML = '<div>Ningún coste añadido</div>';
