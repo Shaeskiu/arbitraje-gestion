@@ -4,29 +4,433 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Arbitraje Comercial</title>
+    <!-- Google Fonts - Tipografía distintiva -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="icon" href="./assets/favicon.png" />
     <style>
+        :root {
+            /* Paleta de colores distintiva */
+            --color-primary: #6366f1;
+            --color-primary-dark: #4f46e5;
+            --color-primary-light: #818cf8;
+            --color-secondary: #10b981;
+            --color-accent: #f59e0b;
+            --color-danger: #ef4444;
+            --color-bg: #f8fafc;
+            --color-surface: #ffffff;
+            --color-text: #1e293b;
+            --color-text-light: #64748b;
+            --color-border: #e2e8f0;
+            --color-shadow: rgba(15, 23, 42, 0.08);
+            --color-shadow-lg: rgba(15, 23, 42, 0.12);
+            
+            /* Tipografía */
+            --font-display: 'Outfit', -apple-system, sans-serif;
+            --font-body: 'Inter', -apple-system, sans-serif;
+        }
+        
+        * {
+            font-family: var(--font-body);
+        }
+        
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: var(--font-display);
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            min-height: 100vh;
+        }
+        
         [data-view] {
             display: none;
         }
         [data-view].active {
             display: block;
         }
+        
+        /* Animaciones sutiles */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+            }
+            to {
+                transform: translateX(0);
+            }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        .animate-slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        /* Cards con sombras distintivas */
+        .card {
+            background: var(--color-surface);
+            border-radius: 16px;
+            box-shadow: 0 1px 3px var(--color-shadow), 0 4px 12px var(--color-shadow-lg);
+            transition: all 0.2s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 4px 6px var(--color-shadow), 0 8px 24px var(--color-shadow-lg);
+            transform: translateY(-2px);
+        }
+        
+        /* Botones mejorados */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+            color: white;
+            font-weight: 600;
+            padding: 0.625rem 1.5rem;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        /* Inputs mejorados */
+        .input-field {
+            border: 2px solid var(--color-border);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            transition: all 0.2s ease;
+            background: var(--color-surface);
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        /* Sidebar responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -100%;
+                top: 0;
+                height: 100vh;
+                z-index: 50;
+                transition: left 0.3s ease;
+            }
+            
+            .sidebar.open {
+                left: 0;
+            }
+            
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 40;
+            }
+            
+            .sidebar-overlay.open {
+                display: block;
+            }
+        }
+        
+        /* Tablas responsive - convertir a cards en móvil */
+        @media (max-width: 768px) {
+            .table-responsive {
+                display: none;
+            }
+            
+            .cards-responsive {
+                display: block;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            .cards-responsive {
+                display: none;
+            }
+        }
+        
+        /* Scrollbar personalizado */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--color-bg);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--color-border);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-text-light);
+        }
+        
+        /* Efectos de hover mejorados */
+        .nav-link {
+            transition: all 0.2s ease;
+            border-radius: 12px;
+        }
+        
+        .nav-link:hover {
+            transform: translateX(4px);
+        }
+        
+        /* Badges mejorados */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        .badge:hover {
+            transform: scale(1.05);
+        }
+        
+        /* Efectos de carga */
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+        
+        .loading {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        /* Efectos de transición para vistas */
+        [data-view] {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        
+        [data-view].active {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        /* Mejoras en tablas */
+        table tbody tr {
+            transition: all 0.2s ease;
+        }
+        
+        table tbody tr:hover {
+            background-color: rgba(99, 102, 241, 0.05);
+            transform: scale(1.01);
+        }
+        
+        /* Mejoras en inputs de fecha y select */
+        input[type="date"],
+        select {
+            cursor: pointer;
+        }
+        
+        /* Efectos de focus mejorados */
+        button:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+        
+        /* Mejoras en el dashboard */
+        .dashboard-card {
+            background: linear-gradient(135deg, var(--color-surface) 0%, #f8fafc 100%);
+            border: 1px solid var(--color-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px var(--color-shadow-lg);
+        }
+        
+        /* Efectos de gradiente en números grandes */
+        .metric-value {
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+        
+        /* Responsive mejorado para móvil */
+        @media (max-width: 640px) {
+            .card {
+                border-radius: 12px;
+                padding: 1rem;
+            }
+            
+            h2 {
+                font-size: 1.5rem;
+            }
+            
+            .btn-primary {
+                padding: 0.75rem 1.25rem;
+                font-size: 0.875rem;
+            }
+        }
+        
+        /* Formulario de oportunidad compacto */
+        [data-view="new"] {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            max-height: 100%;
+            overflow: hidden;
+        }
+        
+        [data-view="new"] .card {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            max-height: 100%;
+            overflow: hidden;
+        }
+        
+        [data-view="new"] form {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 1rem;
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+        }
+        
+        /* Hacer que el formulario sea más compacto en pantallas pequeñas */
+        @media (max-height: 900px) {
+            [data-view="new"] form {
+                gap: 0.625rem;
+                padding: 0.75rem;
+            }
+        }
+        
+        /* Ajustar main cuando está en vista new */
+        main:has([data-view="new"]) {
+            overflow: hidden;
+        }
+        
+        /* Asegurar que el formulario sea visible sin scroll cuando sea posible */
+        @media (min-height: 800px) {
+            [data-view="new"] form {
+                overflow-y: visible;
+            }
+        }
+        
+        @media (max-height: 700px) {
+            [data-view="new"] form {
+                overflow-y: auto;
+                max-height: calc(100vh - 200px);
+            }
+        }
+        
+        /* Secciones colapsables */
+        #links-section,
+        #notes-section {
+            transition: all 0.3s ease;
+        }
+        
+        #links-chevron,
+        #notes-chevron {
+            transition: transform 0.3s ease;
+        }
+        
+        /* Lista de costes compacta */
+        #costs-list {
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        
+        @media (max-width: 768px) {
+            #costs-list {
+                max-height: 100px;
+            }
+            
+            [data-view="new"] form {
+                padding: 0.75rem;
+                gap: 0.625rem;
+            }
+        }
+        
+        /* Inputs más compactos */
+        [data-view="new"] .input-field {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+        }
+        
+        [data-view="new"] label {
+            font-size: 0.8125rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        /* Reducir espacios en secciones colapsables */
+        [data-view="new"] .border-t {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+        }
+        
+        /* Botones de secciones colapsables más compactos */
+        [data-view="new"] button[onclick*="toggle"] {
+            padding: 0.25rem 0;
+        }
     </style>
 </head>
-<body class="bg-gray-50 h-screen overflow-hidden">
+<body class="h-screen overflow-hidden">
     <!-- Vista de Login -->
-    <div data-view="login" class="flex items-center justify-center min-h-screen bg-gray-50">
-        <div class="max-w-md w-full space-y-8 p-8">
+    <div data-view="login" class="flex items-center justify-center min-h-screen relative overflow-hidden">
+        <!-- Fondo con gradiente y efectos -->
+        <div class="absolute inset-0 bg-gradient-to-br from-indigo-50 via-white to-purple-50"></div>
+        <div class="absolute inset-0 opacity-30" style="background-image: radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);"></div>
+        
+        <div class="relative max-w-md w-full space-y-8 p-6 md:p-8 animate-fade-in">
             <div class="text-center">
-                <img src="./assets/logo.png" alt="Arbitraje Gestión" class="mx-auto h-16 mb-4" />
-                <h2 class="text-3xl font-bold text-gray-900">Iniciar Sesión</h2>
-                <p class="mt-2 text-sm text-gray-600">Ingresa tus credenciales para acceder</p>
+                <div class="inline-block p-4 bg-white rounded-2xl shadow-lg mb-6 transform hover:scale-105 transition-transform">
+                    <img src="./assets/logo.png" alt="Arbitraje Gestión" class="h-16" />
+                </div>
+                <h2 class="text-4xl font-display font-bold text-gray-900 mb-2">Iniciar Sesión</h2>
+                <p class="text-gray-600">Ingresa tus credenciales para acceder</p>
             </div>
-            <form id="login-form" class="mt-8 space-y-6 bg-white p-8 rounded-lg shadow-md">
+            <form id="login-form" class="mt-8 space-y-6 card p-8 animate-fade-in" style="animation-delay: 0.1s;">
                 <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
                     <span class="block sm:inline" id="login-error-message"></span>
                 </div>
@@ -41,7 +445,7 @@
                             type="email" 
                             required 
                             autocomplete="email"
-                            class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
+                            class="input-field w-full placeholder-gray-400 text-gray-900" 
                             placeholder="tu@email.com"
                         />
                     </div>
@@ -55,7 +459,7 @@
                             type="password" 
                             required 
                             autocomplete="current-password"
-                            class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
+                            class="input-field w-full placeholder-gray-400 text-gray-900" 
                             placeholder="••••••••"
                         />
                     </div>
@@ -64,7 +468,7 @@
                     <button 
                         type="submit" 
                         id="login-submit"
-                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
                     >
                         <span id="login-submit-text">Iniciar Sesión</span>
                         <span id="login-submit-loading" class="hidden">Iniciando sesión...</span>
@@ -75,12 +479,23 @@
     </div>
 
     <!-- Contenido principal de la aplicación (solo visible si está autenticado) -->
-    <div id="app-content" class="flex h-screen" style="display: none;">
-        <aside class="w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col">
+    <div id="app-content" class="flex h-screen relative" style="display: none;">
+        <!-- Overlay para móvil -->
+        <div id="sidebar-overlay" class="sidebar-overlay" onclick="app.toggleSidebar()"></div>
+        
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar w-64 bg-white shadow-xl border-r border-gray-200 flex flex-col z-50">
             <div class="p-6 flex-1 flex flex-col">
-                <button onclick="app.showView('dashboard')" class="cursor-pointer hover:opacity-80 transition-opacity focus:outline-none">
-                    <img src="./assets/logo.png" alt="Arbitraje Gestión" class="h-15" />
-                </button>
+                <div class="flex items-center justify-between mb-6">
+                    <button onclick="app.showView('dashboard')" class="cursor-pointer hover:opacity-80 transition-opacity focus:outline-none">
+                        <img src="./assets/logo.png" alt="Arbitraje Gestión" class="h-12" />
+                    </button>
+                    <button id="close-sidebar" onclick="app.toggleSidebar()" class="md:hidden text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
                 <nav class="space-y-1 flex-1 flex flex-col">
                     <button data-nav="dashboard" class="nav-link w-full text-left px-4 py-3 text-sm font-medium bg-indigo-50 text-indigo-700 rounded-md transition-colors">
                         Dashboard
@@ -132,19 +547,26 @@
             </div>
         </aside>
 
-        <main class="flex-1 overflow-auto p-6">
+        <!-- Botón hamburguesa para móvil -->
+        <button id="menu-toggle" onclick="app.toggleSidebar()" class="md:hidden fixed top-4 left-4 z-30 bg-white p-2 rounded-lg shadow-lg">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+        </button>
+        
+        <main class="flex-1 overflow-hidden p-4 md:p-6 pt-16 md:pt-6">
         <div data-view="opportunities" class="w-full h-full">
             <div class="w-full h-full">
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-2xl font-bold text-gray-900">Oportunidades</h2>
-                        <button onclick="app.showView('new')" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                        <h2 class="text-2xl font-display font-bold text-gray-900">Oportunidades</h2>
+                        <button onclick="app.showView('new')" class="btn-primary text-sm">
                             + Nueva Oportunidad
                         </button>
                     </div>
                 </div>
 
-                <div class="bg-white shadow rounded-lg">
+                <div class="card">
                     <div class="p-6">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-lg font-medium text-gray-900">Oportunidades</h3>
@@ -158,7 +580,11 @@
                                 <input type="text" id="search-input" placeholder="Buscar..." class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                             </div>
                         </div>
-                        <div class="overflow-x-auto">
+                        <!-- Cards para móvil -->
+                        <div id="opportunities-cards" class="cards-responsive space-y-4 mb-4"></div>
+                        
+                        <!-- Tabla para desktop -->
+                        <div class="table-responsive overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
@@ -182,17 +608,17 @@
 
         <div data-view="dashboard" class="active w-full h-full">
             <div class="space-y-6">
-                <h2 class="text-2xl font-bold text-gray-900">Dashboard de Negocio</h2>
+                <h2 class="text-2xl font-display font-bold text-gray-900">Dashboard de Negocio</h2>
                 
                 <!-- Immobilized Capital KPI -->
-                <div class="bg-white shadow rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">Capital Inmovilizado</h3>
-                    <div class="text-4xl font-semibold text-indigo-600" id="dashboard-immobilized-capital">€0.00</div>
+                <div class="dashboard-card">
+                    <h3 class="text-lg font-display font-semibold text-gray-900 mb-4">Capital Inmovilizado</h3>
+                    <div class="text-4xl font-display font-bold metric-value" id="dashboard-immobilized-capital">€0.00</div>
                     <p class="text-sm text-gray-500 mt-2">Valor total del stock actual (unidades restantes × precio de compra)</p>
                 </div>
 
                 <!-- Sales Over Time Chart -->
-                <div class="bg-white shadow rounded-lg p-6">
+                <div class="dashboard-card">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-medium text-gray-900">Ventas en el Tiempo</h3>
                         <div class="flex gap-2">
@@ -219,7 +645,7 @@
                 </div>
 
                 <!-- Margins Chart -->
-                <div class="bg-white shadow rounded-lg p-6">
+                <div class="dashboard-card">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-medium text-gray-900">Márgenes</h3>
                         <select id="margins-date-range" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
@@ -242,141 +668,144 @@
             </div>
         </div>
 
-        <div data-view="new" class="w-full">
-            <div class="bg-white shadow rounded-lg">
-                <div class="p-6">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6" id="form-title">Nueva Oportunidad</h2>
-                    <form id="opportunity-form" class="space-y-6">
+        <div data-view="new" class="w-full h-full">
+            <div class="card h-full flex flex-col">
+                <div class="p-4 md:p-5 flex-shrink-0 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+                    <h2 class="text-xl md:text-2xl font-display font-bold text-gray-900" id="form-title">Nueva Oportunidad</h2>
+                </div>
+                <form id="opportunity-form" class="flex-1 overflow-y-auto">
                         <input type="hidden" id="opportunity-id">
                         
                         <div>
-                            <label for="product-name" class="block text-sm font-medium text-gray-700">Producto</label>
-                            <input type="text" id="product-name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <label for="product-name" class="block text-sm font-medium text-gray-700 mb-1">Producto *</label>
+                            <input type="text" id="product-name" required class="input-field w-full" placeholder="Nombre del producto">
                         </div>
 
-                        <div class="border-t border-gray-200 pt-6">
-                            <h3 class="text-sm font-medium text-gray-700 mb-4">Información Adicional</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Enlaces colapsables (ocultos por defecto) -->
+                        <div class="border-t border-gray-100 pt-2">
+                            <button type="button" onclick="app.toggleLinksSection()" class="flex items-center justify-between w-full text-left text-xs text-gray-400 hover:text-gray-600 transition-colors group py-1">
+                                <span class="flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 transition-transform" id="links-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                    <span class="italic">Enlaces opcionales</span>
+                                </span>
+                            </button>
+                            <div id="links-section" class="hidden mt-2 space-y-2">
                                 <div>
-                                    <label for="offer-link" class="block text-sm font-medium text-gray-700">Enlace de la Oferta</label>
-                                    <input type="url" id="offer-link" placeholder="https://..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                    <p class="mt-1 text-xs text-gray-500">URL donde viste la oferta</p>
+                                    <label for="offer-link" class="block text-xs font-medium text-gray-400 mb-0.5">Enlace de la Oferta</label>
+                                    <input type="url" id="offer-link" placeholder="https://..." class="input-field w-full text-xs py-1.5">
                                 </div>
                                 <div>
-                                    <label for="market-price-link" class="block text-sm font-medium text-gray-700">Enlace de Precios de Mercado</label>
-                                    <input type="url" id="market-price-link" placeholder="https://..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                    <p class="mt-1 text-xs text-gray-500">URL para comparar precios de mercado</p>
+                                    <label for="market-price-link" class="block text-xs font-medium text-gray-400 mb-0.5">Enlace de Precios de Mercado</label>
+                                    <input type="url" id="market-price-link" placeholder="https://..." class="input-field w-full text-xs py-1.5">
                                 </div>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label for="origin-channel-select" class="block text-sm font-medium text-gray-700">Canal Origen</label>
-                                <select id="origin-channel-select" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <label for="origin-channel-select" class="block text-sm font-medium text-gray-700 mb-1">Canal Origen *</label>
+                                <select id="origin-channel-select" required class="input-field w-full">
                                     <option value="">Selecciona un canal</option>
                                 </select>
                                 <input type="hidden" id="origin-channel-id">
                             </div>
                             <div>
-                                <label for="origin-price" class="block text-sm font-medium text-gray-700">Precio Compra (€)</label>
-                                <input type="number" id="origin-price" step="0.01" min="0" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <label for="origin-price" class="block text-sm font-medium text-gray-700 mb-1">Precio Compra (€) *</label>
+                                <input type="number" id="origin-price" step="0.01" min="0" required class="input-field w-full">
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label for="dest-channel-select" class="block text-sm font-medium text-gray-700">Canal Destino</label>
-                                <select id="dest-channel-select" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <label for="dest-channel-select" class="block text-sm font-medium text-gray-700 mb-1">Canal Destino *</label>
+                                <select id="dest-channel-select" required class="input-field w-full">
                                     <option value="">Selecciona un canal</option>
                                 </select>
                                 <input type="hidden" id="dest-channel-id">
                             </div>
                             <div>
-                                <label for="dest-price" class="block text-sm font-medium text-gray-700">Precio Venta Estimado (€)</label>
-                                <input type="number" id="dest-price" step="0.01" min="0" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                <p class="mt-1 text-xs text-gray-500">Precio al que esperas vender</p>
+                                <label for="dest-price" class="block text-sm font-medium text-gray-700 mb-1">Precio Venta Estimado (€) *</label>
+                                <input type="number" id="dest-price" step="0.01" min="0" required class="input-field w-full">
                             </div>
                         </div>
 
                         <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <label class="block text-sm font-medium text-gray-700">Costes</label>
-                                <button type="button" onclick="app.addCost()" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">+ Añadir Coste</button>
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="block text-sm font-medium text-gray-700">Costes (opcional)</label>
+                                <button type="button" onclick="app.addCost()" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">+ Añadir</button>
                             </div>
-                            <div id="costs-list" class="space-y-3">
+                            <div id="costs-list" class="space-y-1.5 max-h-24 overflow-y-auto mb-1.5">
                             </div>
-                            <div id="costs-breakdown" class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                <div class="text-xs font-medium text-blue-900 mb-2">Desglose de Costes:</div>
-                                <div id="costs-breakdown-content" class="text-xs text-blue-800 space-y-1">
-                                    <div>Ningún coste añadido</div>
-                                </div>
-                                <div class="mt-2 pt-2 border-t border-blue-200">
-                                    <span class="text-xs font-semibold text-blue-900">Total Costes: </span>
-                                    <span id="costs-total" class="text-xs font-bold text-blue-900">€0.00</span>
+                            <div id="costs-breakdown" class="p-2 bg-blue-50 rounded-lg border border-blue-200 text-xs">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-medium text-blue-900">Total Costes:</span>
+                                    <span id="costs-total" class="font-bold text-blue-900">€0.00</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div>
-                            <label for="notes" class="block text-sm font-medium text-gray-700">Notas</label>
-                            <textarea id="notes" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
-                        </div>
-
-                        <div class="bg-gray-50 p-4 rounded-lg space-y-4">
-                            <div>
-                                <h3 class="text-sm font-medium text-gray-700 mb-3">Cálculos Estimados</h3>
-                                <div class="grid grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                        <span class="text-gray-500">Margen Bruto Estimado:</span>
-                                        <span id="calc-margin-bruto" class="ml-2 font-semibold">€0.00</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-500">Costes Totales:</span>
-                                        <span id="calc-costes-totales" class="ml-2 font-semibold">€0.00</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-500">Margen Neto Estimado:</span>
-                                        <span id="calc-margin-neto" class="ml-2 font-semibold">€0.00</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-500">Rentabilidad Estimada:</span>
-                                        <span id="calc-rentabilidad" class="ml-2 font-semibold">0%</span>
-                                    </div>
+                        <!-- Cálculos compactos -->
+                        <div class="bg-gradient-to-br from-indigo-50 to-purple-50 p-2.5 rounded-lg border border-indigo-100 shadow-sm">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                <div class="text-center">
+                                    <div class="text-gray-600 mb-0.5 text-[10px]">Margen Bruto</div>
+                                    <div id="calc-margin-bruto" class="font-display font-bold text-indigo-700 text-sm">€0.00</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-gray-600 mb-0.5 text-[10px]">Costes</div>
+                                    <div id="calc-costes-totales" class="font-display font-bold text-gray-700 text-sm">€0.00</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-gray-600 mb-0.5 text-[10px]">Margen Neto</div>
+                                    <div id="calc-margin-neto" class="font-display font-bold text-green-600 text-sm">€0.00</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-gray-600 mb-0.5 text-[10px]">Rentabilidad</div>
+                                    <div id="calc-rentabilidad" class="font-display font-bold text-purple-600 text-sm">0%</div>
                                 </div>
                             </div>
-                            <div id="calc-real-section" style="display: none;">
-                                <div class="border-t border-gray-300 pt-3">
-                                    <h3 class="text-sm font-medium text-gray-700 mb-3">Cálculos Reales</h3>
-                                    <div class="grid grid-cols-2 gap-4 text-sm">
-                                        <div>
-                                            <span class="text-gray-500">Margen Neto Real:</span>
-                                            <span id="calc-margin-neto-real" class="ml-2 font-semibold">€0.00</span>
-                                        </div>
-                                        <div>
-                                            <span class="text-gray-500">Rentabilidad Real:</span>
-                                            <span id="calc-rentabilidad-real" class="ml-2 font-semibold">0%</span>
-                                        </div>
+                            <div id="calc-real-section" class="hidden mt-2 pt-2 border-t border-indigo-200">
+                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                    <div class="text-center">
+                                        <div class="text-gray-600 mb-0.5 text-[10px]">Margen Neto Real</div>
+                                        <div id="calc-margin-neto-real" class="font-display font-bold text-green-600 text-sm">€0.00</div>
                                     </div>
-                                    <div class="mt-3 pt-3 border-t border-gray-300">
-                                        <div class="text-sm">
-                                            <span class="text-gray-500">Diferencia (Real - Estimado):</span>
-                                            <span id="calc-diferencia" class="ml-2 font-semibold">€0.00</span>
-                                        </div>
+                                    <div class="text-center">
+                                        <div class="text-gray-600 mb-0.5 text-[10px]">Rentabilidad Real</div>
+                                        <div id="calc-rentabilidad-real" class="font-display font-bold text-purple-600 text-sm">0%</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="flex justify-end space-x-3">
-                            <button type="button" onclick="app.showView('dashboard')" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                                Cancelar
+                        <!-- Notas colapsables (ocultas por defecto) -->
+                        <div class="border-t border-gray-100 pt-2">
+                            <button type="button" onclick="app.toggleNotesSection()" class="flex items-center justify-between w-full text-left text-xs text-gray-400 hover:text-gray-600 transition-colors group py-1">
+                                <span class="flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 transition-transform" id="notes-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                    <span class="italic">Notas opcionales</span>
+                                </span>
                             </button>
-                            <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                                Guardar
-                            </button>
+                            <div id="notes-section" class="hidden mt-2">
+                                <textarea id="notes" rows="2" class="input-field w-full text-xs py-1.5" placeholder="Añade notas adicionales..."></textarea>
+                            </div>
                         </div>
+
                     </form>
+                </div>
+                <div class="flex-shrink-0 border-t border-gray-200 p-3 md:p-4 bg-white">
+                    <div class="flex justify-end gap-2 md:gap-3">
+                        <button type="button" onclick="app.showView('dashboard')" class="px-3 md:px-4 py-2 border border-gray-300 rounded-lg text-xs md:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                            Cancelar
+                        </button>
+                        <button type="submit" form="opportunity-form" class="btn-primary text-xs md:text-sm px-3 md:px-4">
+                            Guardar
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -513,7 +942,7 @@
                         <button onclick="app.showView('dashboard')" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                             Volver
                         </button>
-                        <button onclick="app.saveDetail()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                        <button onclick="app.saveDetail()" class="btn-primary text-sm">
                             Guardar Cambios
                         </button>
                         <button onclick="app.deleteOpportunity()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">
@@ -528,7 +957,7 @@
             <div class="mb-6">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold text-gray-900">Gestión de Canales</h2>
-                    <button onclick="app.showChannelForm()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                    <button onclick="app.showChannelForm()" class="btn-primary text-sm">
                         + Nuevo Canal
                     </button>
                 </div>
@@ -558,7 +987,7 @@
             <div class="mb-6">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold text-gray-900">Gestión de Localizaciones</h2>
-                    <button onclick="app.showLocalizacionForm()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                    <button onclick="app.showLocalizacionForm()" class="btn-primary text-sm">
                         + Nueva Localización
                     </button>
                 </div>
@@ -584,10 +1013,13 @@
         </div>
 
         <div data-view="stock" class="w-full">
-            <div class="bg-white shadow rounded-lg">
+            <div class="card">
                 <div class="p-6">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Stock Disponible</h2>
-                    <div class="overflow-x-auto">
+                    <h2 class="text-2xl font-display font-bold text-gray-900 mb-6">Stock Disponible</h2>
+                    <!-- Cards para móvil -->
+                    <div id="stock-cards" class="cards-responsive space-y-4 mb-4"></div>
+                    <!-- Tabla para desktop -->
+                    <div class="table-responsive overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
@@ -611,10 +1043,13 @@
         </div>
 
         <div data-view="compras" class="w-full">
-            <div class="bg-white shadow rounded-lg">
+            <div class="card">
                 <div class="p-6">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Compras</h2>
-                    <div class="overflow-x-auto">
+                    <h2 class="text-2xl font-display font-bold text-gray-900 mb-6">Compras</h2>
+                    <!-- Cards para móvil -->
+                    <div id="compras-cards" class="cards-responsive space-y-4 mb-4"></div>
+                    <!-- Tabla para desktop -->
+                    <div class="table-responsive overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
@@ -636,10 +1071,13 @@
         </div>
 
         <div data-view="ventas" class="w-full">
-            <div class="bg-white shadow rounded-lg">
+            <div class="card">
                 <div class="p-6">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Ventas</h2>
-                    <div class="overflow-x-auto">
+                    <h2 class="text-2xl font-display font-bold text-gray-900 mb-6">Ventas</h2>
+                    <!-- Cards para móvil -->
+                    <div id="ventas-cards" class="cards-responsive space-y-4 mb-4"></div>
+                    <!-- Tabla para desktop -->
+                    <div class="table-responsive overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
@@ -759,7 +1197,7 @@
                         <button onclick="app.showView('ventas')" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                             Volver
                         </button>
-                        <button onclick="app.saveVentaDetail()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                        <button onclick="app.saveVentaDetail()" class="btn-primary text-sm">
                             Guardar Cambios
                         </button>
                     </div>
@@ -802,7 +1240,7 @@
                             <button type="button" onclick="app.showView('channels')" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                                 Cancelar
                             </button>
-                            <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                            <button type="submit" class="btn-primary text-sm">
                                 Guardar
                             </button>
                         </div>
@@ -832,7 +1270,7 @@
                             <button type="button" onclick="app.showView('localizaciones')" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                                 Cancelar
                             </button>
-                            <button type="button" onclick="app.saveLocalizacion()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                            <button type="button" onclick="app.saveLocalizacion()" class="btn-primary text-sm">
                                 Guardar
                             </button>
                         </div>
@@ -847,10 +1285,10 @@
 
     <!-- Compra Modal -->
     <div id="compra-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center" onclick="app.closeCompraModalOnOverlay(event)">
-        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" onclick="event.stopPropagation()">
+        <div class="card max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold text-gray-900">Registrar Compra</h2>
+                    <h2 class="text-2xl font-display font-bold text-gray-900">Registrar Compra</h2>
                     <button onclick="app.closeCompraModal()" class="text-gray-400 hover:text-gray-600">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -887,7 +1325,7 @@
                         <button type="button" onclick="app.closeCompraModal()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                             Cancelar
                         </button>
-                        <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                        <button type="submit" class="btn-primary text-sm">
                             Comprar
                         </button>
                     </div>
@@ -898,10 +1336,10 @@
 
     <!-- Recepcionar Stock Modal -->
     <div id="recepcionar-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center" onclick="app.closeRecepcionarModalOnOverlay(event)">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" onclick="event.stopPropagation()">
+        <div class="card max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold text-gray-900">Recepcionar Stock</h2>
+                    <h2 class="text-2xl font-display font-bold text-gray-900">Recepcionar Stock</h2>
                     <button onclick="app.closeRecepcionarModal()" class="text-gray-400 hover:text-gray-600">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -921,7 +1359,7 @@
                         <button type="button" onclick="app.closeRecepcionarModal()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                             Cancelar
                         </button>
-                        <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                        <button type="submit" class="btn-primary text-sm">
                             Recepcionar
                         </button>
                     </div>
@@ -932,10 +1370,10 @@
 
     <!-- Venta Modal -->
     <div id="venta-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center" onclick="app.closeVentaModalOnOverlay(event)">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" onclick="event.stopPropagation()">
+        <div class="card max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold text-gray-900">Registrar Venta</h2>
+                    <h2 class="text-2xl font-display font-bold text-gray-900">Registrar Venta</h2>
                     <button onclick="app.closeVentaModal()" class="text-gray-400 hover:text-gray-600">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -967,7 +1405,7 @@
                         <button type="button" onclick="app.closeVentaModal()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                             Cancelar
                         </button>
-                        <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                        <button type="submit" class="btn-primary text-sm">
                             Vender
                         </button>
                     </div>

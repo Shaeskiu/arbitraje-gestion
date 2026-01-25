@@ -19,15 +19,29 @@ const ui = {
         }
         
         const tbody = document.getElementById('opportunities-table');
+        const cardsContainer = document.getElementById('opportunities-cards') || (() => {
+            // Crear contenedor de cards si no existe
+            const container = document.createElement('div');
+            container.id = 'opportunities-cards';
+            container.className = 'cards-responsive space-y-4';
+            const tableContainer = document.querySelector('.overflow-x-auto');
+            if (tableContainer && tableContainer.parentNode) {
+                tableContainer.parentNode.insertBefore(container, tableContainer);
+            }
+            return container;
+        })();
+        
         if (!tbody) {
             console.error('Opportunities table body not found');
             return;
         }
         
         tbody.innerHTML = '';
+        if (cardsContainer) cardsContainer.innerHTML = '';
         
         if (filtered.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">No hay oportunidades</td></tr>';
+            if (cardsContainer) cardsContainer.innerHTML = '<div class="text-center text-gray-500 py-8">No hay oportunidades</div>';
             return;
         }
         
@@ -114,6 +128,51 @@ const ui = {
             `;
             
             tbody.appendChild(row);
+            
+            // Crear card para móvil
+            if (cardsContainer) {
+                const card = document.createElement('div');
+                card.className = 'card p-4';
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <h3 class="font-display font-semibold text-lg text-gray-900">${this.escapeHtml(opportunity.productName)}</h3>
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">
+                            ${statusLabel}
+                        </span>
+                    </div>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Origen → Destino</span>
+                            <span class="font-medium text-gray-900">${this.escapeHtml(originChannelName)} → ${this.escapeHtml(destChannelName)}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Precio Compra</span>
+                            <span class="font-medium text-gray-900">${this.formatCurrency(precioCompra)}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Precio Venta</span>
+                            <span class="font-medium text-gray-900">${this.formatCurrency(precioVenta)}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Margen Neto</span>
+                            <span class="font-medium ${margenNeto >= 0 ? 'text-green-600' : 'text-red-600'}">${this.formatCurrency(margenNeto)}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Rentabilidad</span>
+                            <span class="font-medium ${rentabilidadEstimada >= 0 ? 'text-green-600' : 'text-red-600'}">${this.formatPercent(rentabilidadEstimada)}</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 pt-3 border-t border-gray-200">
+                        <button onclick="app.showDetail('${opportunity.id}')" class="flex-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
+                            Ver
+                        </button>
+                        ${opportunity.status !== 'convertida' ? `<button onclick="app.openCompraModal('${opportunity.id}', '${opportunity.canalOrigenId || opportunity.originChannelId || ''}', ${precioCompra}, '${this.escapeHtml(opportunity.productName)}')" class="flex-1 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">
+                            Comprar
+                        </button>` : ''}
+                    </div>
+                `;
+                cardsContainer.appendChild(card);
+            }
         });
     },
     
@@ -782,15 +841,28 @@ const ui = {
     
     renderStock(stockItems) {
         const tbody = document.getElementById('stock-table');
+        const cardsContainer = document.getElementById('stock-cards') || (() => {
+            const container = document.createElement('div');
+            container.id = 'stock-cards';
+            container.className = 'cards-responsive space-y-4';
+            const tableContainer = document.querySelector('[data-view="stock"] .overflow-x-auto');
+            if (tableContainer && tableContainer.parentNode) {
+                tableContainer.parentNode.insertBefore(container, tableContainer);
+            }
+            return container;
+        })();
+        
         if (!tbody) {
             console.error('Stock table body not found');
             return;
         }
         
         tbody.innerHTML = '';
+        if (cardsContainer) cardsContainer.innerHTML = '';
         
         if (!stockItems || stockItems.length === 0) {
             tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-4 text-center text-gray-500">No hay stock disponible</td></tr>';
+            if (cardsContainer) cardsContainer.innerHTML = '<div class="text-center text-gray-500 py-8">No hay stock disponible</div>';
             return;
         }
         
@@ -885,6 +957,76 @@ const ui = {
             `;
             
             tbody.appendChild(row);
+            
+            // Crear card para móvil
+            if (cardsContainer) {
+                const card = document.createElement('div');
+                card.className = 'card p-4 animate-fade-in';
+                
+                // Crear botón de acción para móvil
+                let accionesButtonHtml = '';
+                if (estado === 'pendiente_recibir') {
+                    accionesButtonHtml = `
+                        <button onclick="app.recepcionarStock('${stock.id}')" 
+                                class="w-full px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
+                            Recepcionar
+                        </button>
+                    `;
+                } else if (estado === 'recepcionado') {
+                    accionesButtonHtml = `
+                        <button onclick="app.ponerAVentaStock('${stock.id}')" 
+                                class="w-full px-4 py-2 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                            A la venta
+                        </button>
+                    `;
+                } else if (estado === 'disponible' && stock.unidadesDisponibles > 0) {
+                    accionesButtonHtml = `
+                        <button onclick="app.openVentaModal('${stock.id}', ${stock.unidadesDisponibles})" 
+                                class="w-full px-4 py-2 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                            Vender
+                        </button>
+                    `;
+                }
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <h3 class="font-display font-semibold text-lg text-gray-900">${this.escapeHtml(stock.productoName || 'N/A')}</h3>
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full ${estadoClass}">
+                            ${estadoLabel}
+                        </span>
+                    </div>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Canal Origen</span>
+                            <span class="font-medium text-gray-900">${this.escapeHtml(stock.canalOrigenName || 'N/A')}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Coste Unitario</span>
+                            <span class="font-medium text-gray-900">€${parseFloat(stock.costeUnitarioReal || 0).toFixed(2)}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Unidades</span>
+                            <span class="font-medium text-gray-900">${stock.unidadesDisponibles} / ${stock.unidadesIniciales}</span>
+                        </div>
+                        <div class="flex justify-between text-sm border-t border-gray-200 pt-2">
+                            <span class="text-gray-500 font-semibold">Valor Total</span>
+                            <span class="font-bold text-indigo-600 text-lg">€${valorTotal.toFixed(2)}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Fecha Compra</span>
+                            <span class="font-medium text-gray-900">${formattedDate}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Localización</span>
+                            <span class="font-medium text-gray-900">${this.escapeHtml(localizacionName)}</span>
+                        </div>
+                    </div>
+                    ${accionesButtonHtml ? `<div class="pt-3 border-t border-gray-200">
+                        ${accionesButtonHtml}
+                    </div>` : ''}
+                `;
+                cardsContainer.appendChild(card);
+            }
         });
     },
     
@@ -962,15 +1104,28 @@ const ui = {
     
     renderCompras(compras) {
         const tbody = document.getElementById('compras-table');
+        const cardsContainer = document.getElementById('compras-cards') || (() => {
+            const container = document.createElement('div');
+            container.id = 'compras-cards';
+            container.className = 'cards-responsive space-y-4';
+            const tableContainer = document.querySelector('[data-view="compras"] .overflow-x-auto');
+            if (tableContainer && tableContainer.parentNode) {
+                tableContainer.parentNode.insertBefore(container, tableContainer);
+            }
+            return container;
+        })();
+        
         if (!tbody) {
             console.error('Compras table body not found');
             return;
         }
         
         tbody.innerHTML = '';
+        if (cardsContainer) cardsContainer.innerHTML = '';
         
         if (!compras || compras.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">No hay compras registradas</td></tr>';
+            if (cardsContainer) cardsContainer.innerHTML = '<div class="text-center text-gray-500 py-8">No hay compras registradas</div>';
             return;
         }
         
@@ -1027,20 +1182,74 @@ const ui = {
             `;
             
             tbody.appendChild(row);
+            
+            // Crear card para móvil
+            if (cardsContainer) {
+                const card = document.createElement('div');
+                card.className = 'card p-4 animate-fade-in';
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <h3 class="font-display font-semibold text-lg text-gray-900">${this.escapeHtml(producto)}</h3>
+                        <div class="text-sm text-gray-500">${fechaFormateada}</div>
+                    </div>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Canal Origen</span>
+                            <span class="font-medium text-gray-900">${this.escapeHtml(canalOrigen)}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Unidades</span>
+                            <span class="font-medium text-gray-900">${compra.unidades || 0}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Precio Unitario</span>
+                            <span class="font-medium text-gray-900">${this.formatCurrency(compra.precio_unitario || 0)}</span>
+                        </div>
+                        <div class="flex justify-between text-sm border-t border-gray-200 pt-2">
+                            <span class="text-gray-500 font-semibold">Total Compra</span>
+                            <span class="font-bold text-indigo-600 text-lg">${this.formatCurrency(compra.total_compra || 0)}</span>
+                        </div>
+                    </div>
+                    ${compra.oportunidad_id ? `<div class="pt-3 border-t border-gray-200">
+                        <button onclick="app.showDetail('${compra.oportunidad_id}')" 
+                                class="w-full px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                            Ver Oportunidad
+                        </button>
+                    </div>` : ''}
+                `;
+                cardsContainer.appendChild(card);
+            }
         });
     },
     
     renderVentas(ventas) {
         const tbody = document.getElementById('ventas-table');
+        const cardsContainer = document.getElementById('ventas-cards') || (() => {
+            const container = document.createElement('div');
+            container.id = 'ventas-cards';
+            container.className = 'cards-responsive space-y-4';
+            const tableContainer = document.querySelector('[data-view="ventas"] .overflow-x-auto');
+            if (tableContainer && tableContainer.parentNode) {
+                tableContainer.parentNode.insertBefore(container, tableContainer);
+            }
+            return container;
+        })();
+        
         if (!tbody) {
             console.error('Ventas table body not found');
             return;
         }
         
         tbody.innerHTML = '';
+        if (cardsContainer) cardsContainer.innerHTML = '';
         
         if (!ventas || ventas.length === 0) {
             tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">No hay ventas registradas</td></tr>';
+            if (cardsContainer) cardsContainer.innerHTML = '<div class="text-center text-gray-500 py-8">No hay ventas registradas</div>';
             return;
         }
         
@@ -1094,6 +1303,49 @@ const ui = {
             `;
             
             tbody.appendChild(row);
+            
+            // Crear card para móvil
+            if (cardsContainer) {
+                const card = document.createElement('div');
+                card.className = 'card p-4 animate-fade-in';
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <h3 class="font-display font-semibold text-lg text-gray-900">${this.escapeHtml(producto)}</h3>
+                        <div class="text-sm text-gray-500">${fechaFormateada}</div>
+                    </div>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Canal Destino</span>
+                            <span class="font-medium text-gray-900">${this.escapeHtml(canalDestino)}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Unidades</span>
+                            <span class="font-medium text-gray-900">${venta.unidades || 0}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Precio Unitario</span>
+                            <span class="font-medium text-gray-900">${this.formatCurrency(venta.precio_unitario || 0)}</span>
+                        </div>
+                        <div class="flex justify-between text-sm border-t border-gray-200 pt-2">
+                            <span class="text-gray-500 font-semibold">Total Venta</span>
+                            <span class="font-bold text-green-600 text-lg">${this.formatCurrency(venta.total_venta || 0)}</span>
+                        </div>
+                        ${venta.margen !== undefined && venta.margen !== null ? `
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Margen</span>
+                            <span class="font-medium ${parseFloat(venta.margen) >= 0 ? 'text-green-600' : 'text-red-600'}">${this.formatCurrency(parseFloat(venta.margen))}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="pt-3 border-t border-gray-200">
+                        <button onclick="app.showVentaDetail('${venta.id}')" 
+                                class="w-full px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
+                            Ver Detalle
+                        </button>
+                    </div>
+                `;
+                cardsContainer.appendChild(card);
+            }
         });
     },
 

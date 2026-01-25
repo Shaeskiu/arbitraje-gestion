@@ -34,10 +34,70 @@ const app = {
         this.setupNavigation();
         this.setupForm();
         this.setupFilters();
+        this.setupSidebar();
         this.loadChannels().then(channels => {
             this.allChannels = channels || [];
         });
         this.showView('dashboard');
+    },
+    
+    setupSidebar() {
+        // Cerrar sidebar al hacer clic en un enlace en móvil
+        const navLinks = document.querySelectorAll('[data-nav]');
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) {
+                    this.toggleSidebar();
+                }
+            });
+        });
+        
+        // Cerrar sidebar al hacer clic en el botón de logout en móvil
+        const logoutBtn = document.querySelector('button[onclick="app.logout()"]');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                if (window.innerWidth < 768) {
+                    this.toggleSidebar();
+                }
+            });
+        }
+        
+        // Cerrar sidebar al redimensionar a desktop
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebar-overlay');
+                if (sidebar) sidebar.classList.remove('open');
+                if (overlay) overlay.classList.remove('open');
+            }
+        });
+    },
+    
+    toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        if (sidebar && overlay) {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+        }
+    },
+    
+    toggleLinksSection() {
+        const section = document.getElementById('links-section');
+        const chevron = document.getElementById('links-chevron');
+        if (section && chevron) {
+            section.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-180');
+        }
+    },
+    
+    toggleNotesSection() {
+        const section = document.getElementById('notes-section');
+        const chevron = document.getElementById('notes-chevron');
+        if (section && chevron) {
+            section.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-180');
+        }
     },
     
     async checkAuth() {
