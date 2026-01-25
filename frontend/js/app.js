@@ -523,15 +523,19 @@ const app = {
         //     view.style.display = 'block';
         // }
         
+        // Remover estilos activos de todos los nav-links
         document.querySelectorAll('.nav-link').forEach(link => {
-            link.classList.remove('bg-indigo-50', 'text-indigo-700');
-            link.classList.add('text-gray-700');
+            link.classList.remove('active', 'bg-indigo-500/20', 'text-indigo-300');
+            // Mantener text-white como base para todos los links
+            if (!link.classList.contains('text-white')) {
+                link.classList.add('text-white');
+            }
         });
         
+        // Aplicar estilos activos al nav-link seleccionado
         const navLink = document.querySelector(`[data-nav="${viewName}"]`);
         if (navLink) {
-            navLink.classList.remove('text-gray-700');
-            navLink.classList.add('bg-indigo-50', 'text-indigo-700');
+            navLink.classList.add('active');
         }
         
         if (viewName === 'dashboard') {

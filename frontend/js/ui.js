@@ -40,8 +40,8 @@ const ui = {
         if (cardsContainer) cardsContainer.innerHTML = '';
         
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">No hay oportunidades</td></tr>';
-            if (cardsContainer) cardsContainer.innerHTML = '<div class="text-center text-gray-500 py-8">No hay oportunidades</div>';
+            tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-slate-400">No hay oportunidades</td></tr>';
+            if (cardsContainer) cardsContainer.innerHTML = '<div class="text-center text-slate-400 py-8">No hay oportunidades</div>';
             return;
         }
         
@@ -67,15 +67,15 @@ const ui = {
             const rentabilidadEstimada = calc.estimated.profitability;
             
             const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50';
+            row.className = 'hover:bg-slate-700/30';
             
             const originChannelName = opportunity.originChannel || 'N/A';
             const destChannelName = opportunity.destChannel || 'N/A';
             
             const statusColors = {
-                'detectada': 'bg-blue-100 text-blue-800',
-                'descartada': 'bg-red-100 text-red-800',
-                'convertida': 'bg-green-100 text-green-800'
+                'detectada': 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
+                'descartada': 'bg-red-500/20 text-red-300 border border-red-500/30',
+                'convertida': 'bg-green-500/20 text-green-300 border border-green-500/30'
             };
             
             const statusLabels = {
@@ -84,12 +84,12 @@ const ui = {
                 'convertida': 'Convertida'
             };
             
-            const statusClass = statusColors[opportunity.status] || 'bg-gray-100 text-gray-800';
+            const statusClass = statusColors[opportunity.status] || 'bg-slate-700/50 text-slate-300 border border-slate-600';
             const statusLabel = statusLabels[opportunity.status] || this.capitalize(opportunity.status || '');
             
             const buttonHtml = opportunity.status === 'convertida' 
-                ? '<span class="text-gray-400 text-sm">Convertida</span>'
-                : `<button onclick="app.openCompraModal('${opportunity.id}', '${opportunity.canalOrigenId || opportunity.originChannelId || ''}', ${precioCompra}, '${this.escapeHtml(opportunity.productName)}')" class="text-green-600 hover:text-green-900" title="Comprar">
+                ? '<span class="text-slate-300 text-sm">Convertida</span>'
+                : `<button onclick="app.openCompraModal('${opportunity.id}', '${opportunity.canalOrigenId || opportunity.originChannelId || ''}', ${precioCompra}, '${this.escapeHtml(opportunity.productName)}')" class="text-green-300 hover:text-green-200" title="Comprar">
                     <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     </svg>
@@ -97,22 +97,22 @@ const ui = {
             
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900">${this.escapeHtml(opportunity.productName)}</div>
+                    <div class="text-sm font-medium text-white">${this.escapeHtml(opportunity.productName)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${this.escapeHtml(originChannelName)}</div>
-                    <div class="text-sm text-gray-500">→ ${this.escapeHtml(destChannelName)}</div>
+                    <div class="text-sm text-white">${this.escapeHtml(originChannelName)}</div>
+                    <div class="text-sm text-slate-200">→ ${this.escapeHtml(destChannelName)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">Compra Est: ${this.formatCurrency(precioCompra)}</div>
-                    <div class="text-sm text-gray-500">Venta Est: ${this.formatCurrency(precioVenta)}</div>
+                    <div class="text-sm text-white">Compra Est: ${this.formatCurrency(precioCompra)}</div>
+                    <div class="text-sm text-slate-200">Venta Est: ${this.formatCurrency(precioVenta)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${this.formatCurrency(calc.estimated.grossMargin)}</div>
-                    <div class="text-xs text-gray-500">Neto: ${this.formatCurrency(margenNeto)}</div>
+                    <div class="text-sm text-white">${this.formatCurrency(calc.estimated.grossMargin)}</div>
+                    <div class="text-xs text-slate-200">Neto: ${this.formatCurrency(margenNeto)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm ${rentabilidadEstimada >= 0 ? 'text-green-600' : 'text-red-600'}">
+                    <div class="text-sm ${rentabilidadEstimada >= 0 ? 'text-green-400' : 'text-red-400'}">
                         ${this.formatPercent(rentabilidadEstimada)}
                     </div>
                 </td>
@@ -122,7 +122,7 @@ const ui = {
                     </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    <button onclick="app.showDetail('${opportunity.id}')" class="text-indigo-600 hover:text-indigo-900">Ver</button>
+                    <button onclick="app.showDetail('${opportunity.id}')" class="text-indigo-400 hover:text-indigo-300">Ver</button>
                     ${buttonHtml}
                 </td>
             `;
@@ -135,35 +135,35 @@ const ui = {
                 card.className = 'card p-4';
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
-                        <h3 class="font-display font-semibold text-lg text-gray-900">${this.escapeHtml(opportunity.productName)}</h3>
+                        <h3 class="font-display font-semibold text-lg text-white">${this.escapeHtml(opportunity.productName)}</h3>
                         <span class="px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">
                             ${statusLabel}
                         </span>
                     </div>
                     <div class="space-y-2 mb-4">
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Origen → Destino</span>
-                            <span class="font-medium text-gray-900">${this.escapeHtml(originChannelName)} → ${this.escapeHtml(destChannelName)}</span>
+                            <span class="text-slate-300">Origen → Destino</span>
+                            <span class="font-medium text-white">${this.escapeHtml(originChannelName)} → ${this.escapeHtml(destChannelName)}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Precio Compra</span>
-                            <span class="font-medium text-gray-900">${this.formatCurrency(precioCompra)}</span>
+                            <span class="text-slate-300">Precio Compra</span>
+                            <span class="font-medium text-white">${this.formatCurrency(precioCompra)}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Precio Venta</span>
-                            <span class="font-medium text-gray-900">${this.formatCurrency(precioVenta)}</span>
+                            <span class="text-slate-300">Precio Venta</span>
+                            <span class="font-medium text-white">${this.formatCurrency(precioVenta)}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Margen Neto</span>
-                            <span class="font-medium ${margenNeto >= 0 ? 'text-green-600' : 'text-red-600'}">${this.formatCurrency(margenNeto)}</span>
+                            <span class="text-slate-300">Margen Neto</span>
+                            <span class="font-medium ${margenNeto >= 0 ? 'text-green-400' : 'text-red-400'}">${this.formatCurrency(margenNeto)}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Rentabilidad</span>
-                            <span class="font-medium ${rentabilidadEstimada >= 0 ? 'text-green-600' : 'text-red-600'}">${this.formatPercent(rentabilidadEstimada)}</span>
+                            <span class="text-slate-300">Rentabilidad</span>
+                            <span class="font-medium ${rentabilidadEstimada >= 0 ? 'text-green-400' : 'text-red-400'}">${this.formatPercent(rentabilidadEstimada)}</span>
                         </div>
                     </div>
-                    <div class="flex gap-2 pt-3 border-t border-gray-200">
-                        <button onclick="app.showDetail('${opportunity.id}')" class="flex-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
+                    <div class="flex gap-2 pt-3 border-t border-slate-700">
+                        <button onclick="app.showDetail('${opportunity.id}')" class="flex-1 px-3 py-2 text-sm font-medium text-indigo-300 bg-indigo-500/20 rounded-lg hover:bg-indigo-500/30 transition-colors">
                             Ver
                         </button>
                         ${opportunity.status !== 'convertida' ? `<button onclick="app.openCompraModal('${opportunity.id}', '${opportunity.canalOrigenId || opportunity.originChannelId || ''}', ${precioCompra}, '${this.escapeHtml(opportunity.productName)}')" class="flex-1 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">
@@ -307,14 +307,14 @@ const ui = {
         const costs = isDetail ? app.detailCosts : app.formCosts;
         
         if (!costs || costs.length === 0) {
-            container.innerHTML = '<div class="text-sm text-gray-500 italic">No hay costes añadidos</div>';
+            container.innerHTML = '<div class="text-sm text-slate-400 italic">No hay costes añadidos</div>';
             return;
         }
         
         costs.forEach((cost, index) => {
             const costDiv = document.createElement('div');
             const isFromChannel = cost.source && (cost.source === 'channel_origin' || cost.source === 'channel_destination');
-            const costBgColor = isFromChannel ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200';
+            const costBgColor = isFromChannel ? 'bg-blue-500/10 border-blue-500/30' : 'bg-slate-800/30 border-slate-600';
             costDiv.className = `border rounded-lg p-4 ${costBgColor}`;
             
             const sourceBadge = isFromChannel 
@@ -325,26 +325,26 @@ const ui = {
                 ${sourceBadge}
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                     <div class="md:col-span-3">
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Nombre</label>
-                        <input type="text" data-cost-index="${index}" data-cost-field="name" value="${this.escapeHtml(cost.name || '')}" placeholder="Ej: Envío" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm ${isFromChannel ? 'bg-blue-50' : ''}">
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Nombre</label>
+                        <input type="text" data-cost-index="${index}" data-cost-field="name" value="${this.escapeHtml(cost.name || '')}" placeholder="Ej: Envío" class="input-field w-full text-sm">
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Tipo</label>
-                        <select data-cost-index="${index}" data-cost-field="type" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm ${isFromChannel ? 'bg-blue-50' : ''}">
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Tipo</label>
+                        <select data-cost-index="${index}" data-cost-field="type" class="input-field w-full text-sm">
                             <option value="fixed" ${cost.type === 'fixed' ? 'selected' : ''}>Valor Fijo</option>
                             <option value="percentage" ${cost.type === 'percentage' ? 'selected' : ''}>Porcentaje</option>
                         </select>
                     </div>
                     <div class="md:col-span-2 cost-base-field" id="cost-base-${containerId}-${index}" style="${cost.type === 'percentage' ? '' : 'display: none;'}">
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Base</label>
-                        <select data-cost-index="${index}" data-cost-field="base" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm ${isFromChannel ? 'bg-blue-50' : ''}">
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Base</label>
+                        <select data-cost-index="${index}" data-cost-field="base" class="input-field w-full text-sm">
                             <option value="purchase" ${cost.base === 'purchase' ? 'selected' : ''}>Precio Compra</option>
                             <option value="sale" ${cost.base === 'sale' ? 'selected' : ''}>Precio Venta</option>
                         </select>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-xs font-medium text-gray-700 mb-1 cost-value-label" id="cost-value-label-${containerId}-${index}">${cost.type === 'percentage' ? 'Porcentaje (%)' : 'Valor (€)'}</label>
-                        <input type="number" data-cost-index="${index}" data-cost-field="value" value="${cost.value || ''}" step="0.01" min="0" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm ${isFromChannel ? 'bg-blue-50' : ''}">
+                        <label class="block text-xs font-medium text-slate-300 mb-1 cost-value-label" id="cost-value-label-${containerId}-${index}">${cost.type === 'percentage' ? 'Porcentaje (%)' : 'Valor (€)'}</label>
+                        <input type="number" data-cost-index="${index}" data-cost-field="value" value="${cost.value || ''}" step="0.01" min="0" class="input-field w-full text-sm">
                     </div>
                     <div class="md:col-span-2 flex items-end">
                         ${isFromChannel ? 
@@ -599,24 +599,24 @@ const ui = {
         tbody.innerHTML = '';
         
         if (!localizaciones || localizaciones.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center text-gray-500">No hay localizaciones registradas</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center text-slate-400">No hay localizaciones registradas</td></tr>';
             return;
         }
         
         localizaciones.forEach(localizacion => {
             const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50';
+            row.className = 'hover:bg-slate-700/30';
             
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900">${this.escapeHtml(localizacion.name)}</div>
+                    <div class="text-sm font-medium text-white">${this.escapeHtml(localizacion.name)}</div>
                 </td>
                 <td class="px-6 py-4">
-                    <div class="text-sm text-gray-500">${localizacion.description ? this.escapeHtml(localizacion.description) : '-'}</div>
+                    <div class="text-sm text-slate-300">${localizacion.description ? this.escapeHtml(localizacion.description) : '-'}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    <button onclick="app.editLocalizacion('${localizacion.id}')" class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</button>
-                    <button onclick="app.deleteLocalizacion('${localizacion.id}')" class="text-red-600 hover:text-red-900">Eliminar</button>
+                    <button onclick="app.editLocalizacion('${localizacion.id}')" class="text-indigo-400 hover:text-indigo-300 mr-3">Editar</button>
+                    <button onclick="app.deleteLocalizacion('${localizacion.id}')" class="text-red-400 hover:text-red-300">Eliminar</button>
                 </td>
             `;
             
@@ -651,31 +651,31 @@ const ui = {
         tbody.innerHTML = '';
         
         if (channels.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">No hay canales. Crea uno nuevo para empezar.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-slate-400">No hay canales. Crea uno nuevo para empezar.</td></tr>';
             return;
         }
         
         channels.forEach(channel => {
             const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50';
+            row.className = 'hover:bg-slate-700/30';
             
             const channelId = channel.id ? String(channel.id) : '';
             
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900">${this.escapeHtml(channel.name)}</div>
+                    <div class="text-sm font-medium text-white">${this.escapeHtml(channel.name)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${channel.originCosts.length} costes</div>
-                    ${channel.originCosts.length > 0 ? `<div class="text-xs text-gray-500">${channel.originCosts.map(c => this.escapeHtml(c.name)).join(', ')}</div>` : ''}
+                    <div class="text-sm text-white">${channel.originCosts.length} costes</div>
+                    ${channel.originCosts.length > 0 ? `<div class="text-xs text-slate-300">${channel.originCosts.map(c => this.escapeHtml(c.name)).join(', ')}</div>` : ''}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${channel.destCosts.length} costes</div>
-                    ${channel.destCosts.length > 0 ? `<div class="text-xs text-gray-500">${channel.destCosts.map(c => this.escapeHtml(c.name)).join(', ')}</div>` : ''}
+                    <div class="text-sm text-white">${channel.destCosts.length} costes</div>
+                    ${channel.destCosts.length > 0 ? `<div class="text-xs text-slate-300">${channel.destCosts.map(c => this.escapeHtml(c.name)).join(', ')}</div>` : ''}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button onclick="app.editChannel('${channelId}')" class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</button>
-                    <button onclick="app.deleteChannel('${channelId}')" class="text-red-600 hover:text-red-900">Eliminar</button>
+                    <button onclick="app.editChannel('${channelId}')" class="text-indigo-400 hover:text-indigo-300 mr-3">Editar</button>
+                    <button onclick="app.deleteChannel('${channelId}')" class="text-red-400 hover:text-red-300">Eliminar</button>
                 </td>
             `;
             
@@ -730,7 +730,7 @@ const ui = {
         container.innerHTML = '';
         
         if (!costs || costs.length === 0) {
-            container.innerHTML = '<div class="text-sm text-gray-500 italic text-center py-4">No hay costes añadidos</div>';
+            container.innerHTML = '<div class="text-sm text-slate-400 italic text-center py-4">No hay costes añadidos</div>';
             return;
         }
         
@@ -738,30 +738,30 @@ const ui = {
         
         costs.forEach((cost, index) => {
             const costDiv = document.createElement('div');
-            costDiv.className = 'border border-gray-200 rounded-lg p-3 bg-white';
+            costDiv.className = 'border border-slate-600 rounded-lg p-3 bg-slate-800/30';
             costDiv.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-11 gap-2 items-end">
                     <div class="md:col-span-3">
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Nombre</label>
-                        <input type="text" data-cost-index="${index}" data-cost-role="${isOrigin ? 'origin' : 'destination'}" data-cost-field="name" value="${this.escapeHtml(cost.name || '')}" placeholder="Ej: Envío" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Nombre</label>
+                        <input type="text" data-cost-index="${index}" data-cost-role="${isOrigin ? 'origin' : 'destination'}" data-cost-field="name" value="${this.escapeHtml(cost.name || '')}" placeholder="Ej: Envío" class="input-field w-full text-sm">
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Tipo</label>
-                        <select data-cost-index="${index}" data-cost-role="${isOrigin ? 'origin' : 'destination'}" data-cost-field="type" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Tipo</label>
+                        <select data-cost-index="${index}" data-cost-role="${isOrigin ? 'origin' : 'destination'}" data-cost-field="type" class="input-field w-full text-sm">
                             <option value="fixed" ${cost.type === 'fixed' ? 'selected' : ''}>Fijo</option>
                             <option value="percentage" ${cost.type === 'percentage' ? 'selected' : ''}>%</option>
                         </select>
                     </div>
                     <div class="md:col-span-2 channel-base-field" id="channel-base-${containerId}-${index}" style="${cost.type === 'percentage' ? '' : 'display: none;'}">
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Base</label>
-                        <select data-cost-index="${index}" data-cost-role="${isOrigin ? 'origin' : 'destination'}" data-cost-field="base" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Base</label>
+                        <select data-cost-index="${index}" data-cost-role="${isOrigin ? 'origin' : 'destination'}" data-cost-field="base" class="input-field w-full text-sm">
                             <option value="purchase" ${cost.base === 'purchase' ? 'selected' : ''}>Compra</option>
                             <option value="sale" ${cost.base === 'sale' ? 'selected' : ''}>Venta</option>
                         </select>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-xs font-medium text-gray-700 mb-1">${cost.type === 'percentage' ? '%' : '€'}</label>
-                        <input type="number" data-cost-index="${index}" data-cost-role="${isOrigin ? 'origin' : 'destination'}" data-cost-field="value" value="${cost.value || ''}" step="0.01" min="0" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        <label class="block text-xs font-medium text-slate-300 mb-1">${cost.type === 'percentage' ? '%' : '€'}</label>
+                        <input type="number" data-cost-index="${index}" data-cost-role="${isOrigin ? 'origin' : 'destination'}" data-cost-field="value" value="${cost.value || ''}" step="0.01" min="0" class="input-field w-full text-sm">
                     </div>
                     <div class="md:col-span-2 flex items-end">
                         <button type="button" onclick="app.removeChannelCost('${isOrigin ? 'origin' : 'destination'}', ${index})" class="w-full px-2 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100">
@@ -889,14 +889,14 @@ const ui = {
         if (cardsContainer) cardsContainer.innerHTML = '';
         
         if (!stockItems || stockItems.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-4 text-center text-gray-500">No hay stock disponible</td></tr>';
-            if (cardsContainer) cardsContainer.innerHTML = '<div class="text-center text-gray-500 py-8">No hay stock disponible</div>';
+            tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-4 text-center text-slate-400">No hay stock disponible</td></tr>';
+            if (cardsContainer) cardsContainer.innerHTML = '<div class="text-center text-slate-400 py-8">No hay stock disponible</div>';
             return;
         }
         
         stockItems.forEach(stock => {
             const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50';
+            row.className = 'hover:bg-slate-700/30';
             
             const valorTotal = stock.unidadesDisponibles * stock.costeUnitarioReal;
             const formattedDate = stock.fechaCompra ? new Date(stock.fechaCompra).toLocaleDateString('es-ES') : 'N/A';
@@ -909,14 +909,14 @@ const ui = {
             };
             
             const estadoColors = {
-                'pendiente_recibir': 'bg-yellow-100 text-yellow-800',
-                'recepcionado': 'bg-blue-100 text-blue-800',
-                'disponible': 'bg-green-100 text-green-800'
+                'pendiente_recibir': 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30',
+                'recepcionado': 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
+                'disponible': 'bg-green-500/20 text-green-300 border border-green-500/30'
             };
             
             const estado = stock.estado || 'disponible';
             const estadoLabel = estadoLabels[estado] || estado;
-            const estadoClass = estadoColors[estado] || 'bg-gray-100 text-gray-800';
+            const estadoClass = estadoColors[estado] || 'bg-slate-700/50 text-slate-300 border border-slate-600';
             
             // Localización
             const localizacionName = stock.localizacion ? stock.localizacion.name : (stock.localizacionName || '-');
@@ -951,25 +951,25 @@ const ui = {
             
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900">${this.escapeHtml(stock.productoName || 'N/A')}</div>
+                    <div class="text-sm font-medium text-white">${this.escapeHtml(stock.productoName || 'N/A')}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${this.escapeHtml(stock.canalOrigenName || 'N/A')}</div>
+                    <div class="text-sm text-white">${this.escapeHtml(stock.canalOrigenName || 'N/A')}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">€${parseFloat(stock.costeUnitarioReal || 0).toFixed(2)}</div>
+                    <div class="text-sm text-white">€${parseFloat(stock.costeUnitarioReal || 0).toFixed(2)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">
+                    <div class="text-sm text-white">
                         <span class="font-medium">${stock.unidadesDisponibles}</span>
-                        <span class="text-gray-400"> / ${stock.unidadesIniciales}</span>
+                        <span class="text-slate-300"> / ${stock.unidadesIniciales}</span>
                     </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-indigo-600">€${valorTotal.toFixed(2)}</div>
+                    <div class="text-sm font-medium text-indigo-400">€${valorTotal.toFixed(2)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-500">${formattedDate}</div>
+                    <div class="text-sm text-slate-300">${formattedDate}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${estadoClass}">
@@ -977,7 +977,7 @@ const ui = {
                     </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${this.escapeHtml(localizacionName)}</div>
+                    <div class="text-sm text-white">${this.escapeHtml(localizacionName)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     ${accionesHtml}
@@ -1018,38 +1018,38 @@ const ui = {
                 
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
-                        <h3 class="font-display font-semibold text-lg text-gray-900">${this.escapeHtml(stock.productoName || 'N/A')}</h3>
+                        <h3 class="font-display font-semibold text-lg text-white">${this.escapeHtml(stock.productoName || 'N/A')}</h3>
                         <span class="px-2 py-1 text-xs font-semibold rounded-full ${estadoClass}">
                             ${estadoLabel}
                         </span>
                     </div>
                     <div class="space-y-2 mb-4">
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Canal Origen</span>
-                            <span class="font-medium text-gray-900">${this.escapeHtml(stock.canalOrigenName || 'N/A')}</span>
+                            <span class="text-slate-300">Canal Origen</span>
+                            <span class="font-medium text-white">${this.escapeHtml(stock.canalOrigenName || 'N/A')}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Coste Unitario</span>
-                            <span class="font-medium text-gray-900">€${parseFloat(stock.costeUnitarioReal || 0).toFixed(2)}</span>
+                            <span class="text-slate-300">Coste Unitario</span>
+                            <span class="font-medium text-white">€${parseFloat(stock.costeUnitarioReal || 0).toFixed(2)}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Unidades</span>
-                            <span class="font-medium text-gray-900">${stock.unidadesDisponibles} / ${stock.unidadesIniciales}</span>
+                            <span class="text-slate-300">Unidades</span>
+                            <span class="font-medium text-white">${stock.unidadesDisponibles} / ${stock.unidadesIniciales}</span>
                         </div>
-                        <div class="flex justify-between text-sm border-t border-gray-200 pt-2">
-                            <span class="text-gray-500 font-semibold">Valor Total</span>
-                            <span class="font-bold text-indigo-600 text-lg">€${valorTotal.toFixed(2)}</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Fecha Compra</span>
-                            <span class="font-medium text-gray-900">${formattedDate}</span>
+                        <div class="flex justify-between text-sm border-t border-slate-700 pt-2">
+                            <span class="text-slate-300 font-semibold">Valor Total</span>
+                            <span class="font-bold text-indigo-400 text-lg">€${valorTotal.toFixed(2)}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Localización</span>
-                            <span class="font-medium text-gray-900">${this.escapeHtml(localizacionName)}</span>
+                            <span class="text-slate-300">Fecha Compra</span>
+                            <span class="font-medium text-white">${formattedDate}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-300">Localización</span>
+                            <span class="font-medium text-white">${this.escapeHtml(localizacionName)}</span>
                         </div>
                     </div>
-                    ${accionesButtonHtml ? `<div class="pt-3 border-t border-gray-200">
+                    ${accionesButtonHtml ? `<div class="pt-3 border-t border-slate-700">
                         ${accionesButtonHtml}
                     </div>` : ''}
                 `;
@@ -1073,22 +1073,22 @@ const ui = {
         }
         
         if (!salesData || salesData.length === 0) {
-            container.innerHTML = '<div class="text-center text-gray-500">No hay datos de ventas disponibles</div>';
+            container.innerHTML = '<div class="text-center text-slate-400">No hay datos de ventas disponibles</div>';
             return;
         }
         
         // Por ahora renderizamos como tabla, después se puede mejorar con un gráfico
-        let html = '<table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr>';
-        html += '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>';
-        html += '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Ventas</th>';
-        html += '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Unidades</th>';
-        html += '</tr></thead><tbody class="bg-white divide-y divide-gray-200">';
+        let html = '<table class="min-w-full divide-y divide-slate-700"><thead class="bg-slate-800/50"><tr>';
+        html += '<th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase">Fecha</th>';
+        html += '<th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase">Total Ventas</th>';
+        html += '<th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase">Unidades</th>';
+        html += '</tr></thead><tbody class="bg-slate-800/30 divide-y divide-slate-700">';
         
         salesData.forEach(item => {
-            html += '<tr class="hover:bg-gray-50">';
-            html += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.escapeHtml(item.period || item.date || 'N/A')}</td>`;
-            html += `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">${this.formatCurrency(item.total_sales || item.total || 0)}</td>`;
-            html += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.total_units || item.unidades || 0}</td>`;
+            html += '<tr class="hover:bg-slate-700/30">';
+            html += `<td class="px-6 py-4 whitespace-nowrap text-sm text-white">${this.escapeHtml(item.period || item.date || 'N/A')}</td>`;
+            html += `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-400">${this.formatCurrency(item.total_sales || item.total || 0)}</td>`;
+            html += `<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-200">${item.total_units || item.unidades || 0}</td>`;
             html += '</tr>';
         });
         
@@ -1104,25 +1104,25 @@ const ui = {
         }
         
         if (!marginsData || marginsData.length === 0) {
-            container.innerHTML = '<div class="text-center text-gray-500">No hay datos de márgenes disponibles</div>';
+            container.innerHTML = '<div class="text-center text-slate-400">No hay datos de márgenes disponibles</div>';
             return;
         }
         
         // Por ahora renderizamos como tabla
-        let html = '<table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr>';
-        html += '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mes</th>';
-        html += '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Margen Bruto</th>';
-        html += '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Margen Neto</th>';
-        html += '</tr></thead><tbody class="bg-white divide-y divide-gray-200">';
+        let html = '<table class="min-w-full divide-y divide-slate-700"><thead class="bg-slate-800/50"><tr>';
+        html += '<th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase">Mes</th>';
+        html += '<th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase">Margen Bruto</th>';
+        html += '<th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase">Margen Neto</th>';
+        html += '</tr></thead><tbody class="bg-slate-800/30 divide-y divide-slate-700">';
         
         marginsData.forEach(item => {
             const grossMargin = parseFloat(item.gross_margin || item.margen_bruto || 0);
             const netMargin = parseFloat(item.net_margin || item.margen_neto || 0);
             
-            html += '<tr class="hover:bg-gray-50">';
-            html += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${this.escapeHtml(item.month || item.mes || 'N/A')}</td>`;
-            html += `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${grossMargin >= 0 ? 'text-green-600' : 'text-red-600'}">${this.formatCurrency(grossMargin)}</td>`;
-            html += `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${netMargin >= 0 ? 'text-green-600' : 'text-red-600'}">${this.formatCurrency(netMargin)}</td>`;
+            html += '<tr class="hover:bg-slate-700/30">';
+            html += `<td class="px-6 py-4 whitespace-nowrap text-sm text-white">${this.escapeHtml(item.month || item.mes || 'N/A')}</td>`;
+            html += `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${grossMargin >= 0 ? 'text-green-400' : 'text-red-400'}">${this.formatCurrency(grossMargin)}</td>`;
+            html += `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${netMargin >= 0 ? 'text-green-400' : 'text-red-400'}">${this.formatCurrency(netMargin)}</td>`;
             html += '</tr>';
         });
         
@@ -1152,14 +1152,14 @@ const ui = {
         if (cardsContainer) cardsContainer.innerHTML = '';
         
         if (!compras || compras.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">No hay compras registradas</td></tr>';
-            if (cardsContainer) cardsContainer.innerHTML = '<div class="text-center text-gray-500 py-8">No hay compras registradas</div>';
+            tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-slate-400">No hay compras registradas</td></tr>';
+            if (cardsContainer) cardsContainer.innerHTML = '<div class="text-center text-slate-400 py-8">No hay compras registradas</div>';
             return;
         }
         
         compras.forEach(compra => {
             const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50';
+            row.className = 'hover:bg-slate-700/30';
             
             const fechaFormateada = compra.fecha_compra 
                 ? new Date(compra.fecha_compra).toLocaleDateString('es-ES')
@@ -1182,27 +1182,27 @@ const ui = {
                     </button>
                 `;
             } else {
-                desdeOportunidadHtml = '<span class="text-gray-400">-</span>';
+                desdeOportunidadHtml = '<span class="text-slate-300">-</span>';
             }
             
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${fechaFormateada}</div>
+                    <div class="text-sm text-white">${fechaFormateada}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900">${this.escapeHtml(producto)}</div>
+                    <div class="text-sm font-medium text-white">${this.escapeHtml(producto)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${this.escapeHtml(canalOrigen)}</div>
+                    <div class="text-sm text-white">${this.escapeHtml(canalOrigen)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${compra.unidades || 0}</div>
+                    <div class="text-sm text-white">${compra.unidades || 0}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${this.formatCurrency(compra.precio_unitario || 0)}</div>
+                    <div class="text-sm text-white">${this.formatCurrency(compra.precio_unitario || 0)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-indigo-600">${this.formatCurrency(compra.total_compra || 0)}</div>
+                    <div class="text-sm font-medium text-indigo-400">${this.formatCurrency(compra.total_compra || 0)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-center">
                     ${desdeOportunidadHtml}
@@ -1217,28 +1217,28 @@ const ui = {
                 card.className = 'card p-4 animate-fade-in';
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
-                        <h3 class="font-display font-semibold text-lg text-gray-900">${this.escapeHtml(producto)}</h3>
-                        <div class="text-sm text-gray-500">${fechaFormateada}</div>
+                        <h3 class="font-display font-semibold text-lg text-white">${this.escapeHtml(producto)}</h3>
+                        <div class="text-sm text-slate-300">${fechaFormateada}</div>
                     </div>
                     <div class="space-y-2 mb-4">
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Canal Origen</span>
-                            <span class="font-medium text-gray-900">${this.escapeHtml(canalOrigen)}</span>
+                            <span class="text-slate-300">Canal Origen</span>
+                            <span class="font-medium text-white">${this.escapeHtml(canalOrigen)}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Unidades</span>
-                            <span class="font-medium text-gray-900">${compra.unidades || 0}</span>
+                            <span class="text-slate-300">Unidades</span>
+                            <span class="font-medium text-white">${compra.unidades || 0}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Precio Unitario</span>
-                            <span class="font-medium text-gray-900">${this.formatCurrency(compra.precio_unitario || 0)}</span>
+                            <span class="text-slate-300">Precio Unitario</span>
+                            <span class="font-medium text-white">${this.formatCurrency(compra.precio_unitario || 0)}</span>
                         </div>
-                        <div class="flex justify-between text-sm border-t border-gray-200 pt-2">
-                            <span class="text-gray-500 font-semibold">Total Compra</span>
-                            <span class="font-bold text-indigo-600 text-lg">${this.formatCurrency(compra.total_compra || 0)}</span>
+                        <div class="flex justify-between text-sm border-t border-slate-700 pt-2">
+                            <span class="text-slate-300 font-semibold">Total Compra</span>
+                            <span class="font-bold text-indigo-400 text-lg">${this.formatCurrency(compra.total_compra || 0)}</span>
                         </div>
                     </div>
-                    ${compra.oportunidad_id ? `<div class="pt-3 border-t border-gray-200">
+                    ${compra.oportunidad_id ? `<div class="pt-3 border-t border-slate-700">
                         <button onclick="app.showDetail('${compra.oportunidad_id}')" 
                                 class="w-full px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1276,14 +1276,14 @@ const ui = {
         if (cardsContainer) cardsContainer.innerHTML = '';
         
         if (!ventas || ventas.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">No hay ventas registradas</td></tr>';
-            if (cardsContainer) cardsContainer.innerHTML = '<div class="text-center text-gray-500 py-8">No hay ventas registradas</div>';
+            tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-slate-400">No hay ventas registradas</td></tr>';
+            if (cardsContainer) cardsContainer.innerHTML = '<div class="text-center text-slate-400 py-8">No hay ventas registradas</div>';
             return;
         }
         
         ventas.forEach(venta => {
             const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50';
+            row.className = 'hover:bg-slate-700/30';
             
             const fechaFormateada = venta.fecha_venta 
                 ? new Date(venta.fecha_venta).toLocaleDateString('es-ES')
@@ -1294,37 +1294,37 @@ const ui = {
             
             // Calcular margen si tenemos el coste del stock asociado
             // Por ahora, si viene en los datos enriquecidos lo usamos, sino mostramos N/A
-            let margenHtml = '<span class="text-sm text-gray-500">N/A</span>';
+            let margenHtml = '<span class="text-sm text-slate-200">N/A</span>';
             if (venta.margen !== undefined && venta.margen !== null) {
                 const margen = parseFloat(venta.margen);
-                const margenClass = margen >= 0 ? 'text-green-600' : 'text-red-600';
+                const margenClass = margen >= 0 ? 'text-green-400' : 'text-red-400';
                 margenHtml = `<span class="text-sm font-medium ${margenClass}">${this.formatCurrency(margen)}</span>`;
             }
             
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${fechaFormateada}</div>
+                    <div class="text-sm text-white">${fechaFormateada}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900">${this.escapeHtml(producto)}</div>
+                    <div class="text-sm font-medium text-white">${this.escapeHtml(producto)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${this.escapeHtml(canalDestino)}</div>
+                    <div class="text-sm text-white">${this.escapeHtml(canalDestino)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${venta.unidades || 0}</div>
+                    <div class="text-sm text-white">${venta.unidades || 0}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${this.formatCurrency(venta.precio_unitario || 0)}</div>
+                    <div class="text-sm text-white">${this.formatCurrency(venta.precio_unitario || 0)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-green-600">${this.formatCurrency(venta.total_venta || 0)}</div>
+                    <div class="text-sm font-medium text-green-400">${this.formatCurrency(venta.total_venta || 0)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     ${margenHtml}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button onclick="app.showVentaDetail('${venta.id}')" class="text-indigo-600 hover:text-indigo-900">
+                    <button onclick="app.showVentaDetail('${venta.id}')" class="text-indigo-400 hover:text-indigo-300">
                         Detalle
                     </button>
                 </td>
@@ -1338,34 +1338,34 @@ const ui = {
                 card.className = 'card p-4 animate-fade-in';
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
-                        <h3 class="font-display font-semibold text-lg text-gray-900">${this.escapeHtml(producto)}</h3>
-                        <div class="text-sm text-gray-500">${fechaFormateada}</div>
+                        <h3 class="font-display font-semibold text-lg text-white">${this.escapeHtml(producto)}</h3>
+                        <div class="text-sm text-slate-300">${fechaFormateada}</div>
                     </div>
                     <div class="space-y-2 mb-4">
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Canal Destino</span>
-                            <span class="font-medium text-gray-900">${this.escapeHtml(canalDestino)}</span>
+                            <span class="text-slate-300">Canal Destino</span>
+                            <span class="font-medium text-white">${this.escapeHtml(canalDestino)}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Unidades</span>
-                            <span class="font-medium text-gray-900">${venta.unidades || 0}</span>
+                            <span class="text-slate-300">Unidades</span>
+                            <span class="font-medium text-white">${venta.unidades || 0}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Precio Unitario</span>
-                            <span class="font-medium text-gray-900">${this.formatCurrency(venta.precio_unitario || 0)}</span>
+                            <span class="text-slate-300">Precio Unitario</span>
+                            <span class="font-medium text-white">${this.formatCurrency(venta.precio_unitario || 0)}</span>
                         </div>
-                        <div class="flex justify-between text-sm border-t border-gray-200 pt-2">
-                            <span class="text-gray-500 font-semibold">Total Venta</span>
-                            <span class="font-bold text-green-600 text-lg">${this.formatCurrency(venta.total_venta || 0)}</span>
+                        <div class="flex justify-between text-sm border-t border-slate-700 pt-2">
+                            <span class="text-slate-300 font-semibold">Total Venta</span>
+                            <span class="font-bold text-green-400 text-lg">${this.formatCurrency(venta.total_venta || 0)}</span>
                         </div>
                         ${venta.margen !== undefined && venta.margen !== null ? `
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Margen</span>
-                            <span class="font-medium ${parseFloat(venta.margen) >= 0 ? 'text-green-600' : 'text-red-600'}">${this.formatCurrency(parseFloat(venta.margen))}</span>
+                            <span class="text-slate-300">Margen</span>
+                            <span class="font-medium ${parseFloat(venta.margen) >= 0 ? 'text-green-400' : 'text-red-400'}">${this.formatCurrency(parseFloat(venta.margen))}</span>
                         </div>
                         ` : ''}
                     </div>
-                    <div class="pt-3 border-t border-gray-200">
+                    <div class="pt-3 border-t border-slate-700">
                         <button onclick="app.showVentaDetail('${venta.id}')" 
                                 class="w-full px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
                             Ver Detalle
@@ -1448,7 +1448,7 @@ const ui = {
         container.innerHTML = '';
 
         if (!costs || costs.length === 0) {
-            container.innerHTML = '<div class="text-sm text-gray-500 italic">No hay costes añadidos</div>';
+            container.innerHTML = '<div class="text-sm text-slate-400 italic">No hay costes añadidos</div>';
             return;
         }
 

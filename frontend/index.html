@@ -4,34 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Arbitraje Comercial</title>
-    <!-- Google Fonts - Tipografía distintiva -->
+    
+    <!-- Tipografías distintivas -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <link rel="icon" href="./assets/favicon.png" />
+    
     <style>
         :root {
-            /* Paleta de colores distintiva */
+            /* Paleta de colores sofisticada */
             --color-primary: #6366f1;
             --color-primary-dark: #4f46e5;
             --color-primary-light: #818cf8;
             --color-secondary: #10b981;
             --color-accent: #f59e0b;
             --color-danger: #ef4444;
-            --color-bg: #f8fafc;
-            --color-surface: #ffffff;
-            --color-text: #1e293b;
-            --color-text-light: #64748b;
-            --color-border: #e2e8f0;
-            --color-shadow: rgba(15, 23, 42, 0.08);
-            --color-shadow-lg: rgba(15, 23, 42, 0.12);
+            --color-bg: #0f172a;
+            --color-surface: #1e293b;
+            --color-surface-light: #334155;
+            --color-text: #f1f5f9;
+            --color-text-light: #94a3b8;
+            --color-border: #334155;
+            --color-shadow: rgba(0, 0, 0, 0.3);
+            --color-shadow-lg: rgba(0, 0, 0, 0.5);
             
             /* Tipografía */
-            --font-display: 'Outfit', -apple-system, sans-serif;
-            --font-body: 'Inter', -apple-system, sans-serif;
+            --font-display: 'Space Grotesk', -apple-system, sans-serif;
+            --font-body: 'DM Sans', -apple-system, sans-serif;
         }
         
         * {
@@ -45,21 +55,41 @@
         }
         
         body {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            background-attachment: fixed;
             min-height: 100vh;
+            color: var(--color-text);
         }
         
-        /* SIMPLIFICADO: Todas las vistas ocultas por defecto */
+        /* Efecto de ruido sutil en el fondo */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.08) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        #app-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Sistema de vistas */
         [data-view] {
             display: none !important;
         }
         
-        /* SIMPLIFICADO: Vistas activas se muestran */
         [data-view].active {
             display: block !important;
         }
         
-        /* Vistas especiales que usan flex */
         [data-view="login"].active {
             display: flex !important;
         }
@@ -68,61 +98,31 @@
             display: flex !important;
         }
         
-        /* Asegurar que las vistas dentro de main se muestren correctamente */
         main [data-view].active {
             display: block !important;
             width: 100%;
             height: 100%;
             overflow-y: auto;
             overflow-x: hidden;
-            -webkit-overflow-scrolling: touch;
         }
         
         main [data-view="new"].active {
             display: flex !important;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
         }
         
-        /* Asegurar que main tenga altura definida */
-        #app-content main {
-            height: 100%;
-            min-height: 0;
-            flex: 1;
-        }
-        
-        /* Asegurar que los formularios de canal y localización se muestren correctamente */
         main [data-view="channel-form"].active,
         main [data-view="localizacion-form"].active {
             display: block !important;
             width: 100%;
-            height: 100% !important;
-            min-height: 100% !important;
+            height: 100%;
             overflow-y: auto;
-            overflow-x: hidden;
-            -webkit-overflow-scrolling: touch;
-            position: relative;
         }
         
-        /* Asegurar que el contenedor interno tenga altura */
-        main [data-view="localizacion-form"].active > div {
-            height: 100% !important;
-            min-height: 100% !important;
-            display: block;
-        }
-        
-        main [data-view="channel-form"].active > div {
-            height: 100% !important;
-            min-height: 100% !important;
-            display: block;
-        }
-        
-        /* Animaciones sutiles */
+        /* Animaciones suaves */
         @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(8px);
+                transform: translateY(12px);
             }
             to {
                 opacity: 1;
@@ -132,32 +132,46 @@
         
         @keyframes slideIn {
             from {
-                transform: translateX(-100%);
+                transform: translateX(-20px);
+                opacity: 0;
             }
             to {
                 transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes shimmer {
+            0% {
+                background-position: -1000px 0;
+            }
+            100% {
+                background-position: 1000px 0;
             }
         }
         
         .animate-fade-in {
-            animation: fadeIn 0.3s ease-out;
+            animation: fadeIn 0.4s ease-out;
         }
         
         .animate-slide-in {
             animation: slideIn 0.3s ease-out;
         }
         
-        /* Cards con sombras distintivas */
+        /* Cards con estilo glassmorphism */
         .card {
-            background: var(--color-surface);
-            border-radius: 16px;
-            box-shadow: 0 1px 3px var(--color-shadow), 0 4px 12px var(--color-shadow-lg);
-            transition: all 0.2s ease;
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         .card:hover {
-            box-shadow: 0 4px 6px var(--color-shadow), 0 8px 24px var(--color-shadow-lg);
-            transform: translateY(-2px);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 48px rgba(99, 102, 241, 0.2);
+            border-color: rgba(99, 102, 241, 0.3);
         }
         
         /* Botones mejorados */
@@ -165,15 +179,32 @@
             background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
             color: white;
             font-weight: 600;
-            padding: 0.625rem 1.5rem;
+            padding: 0.75rem 1.75rem;
             border-radius: 12px;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn-primary:hover::before {
+            left: 100%;
         }
         
         .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(99, 102, 241, 0.5);
         }
         
         .btn-primary:active {
@@ -182,20 +213,141 @@
         
         /* Inputs mejorados */
         .input-field {
-            border: 2px solid var(--color-border);
+            background: rgba(15, 23, 42, 0.6);
+            border: 1.5px solid var(--color-border);
             border-radius: 12px;
-            padding: 0.75rem 1rem;
-            transition: all 0.2s ease;
-            background: var(--color-surface);
+            padding: 0.875rem 1.125rem;
+            color: var(--color-text);
+            transition: all 0.3s ease;
+        }
+        
+        .input-field::placeholder {
+            color: var(--color-text-light);
         }
         
         .input-field:focus {
             outline: none;
             border-color: var(--color-primary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+            background: rgba(15, 23, 42, 0.8);
         }
         
-        /* Sidebar responsive */
+        /* Sidebar mejorado */
+        .sidebar {
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Navegación */
+        .nav-link {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            position: relative;
+        }
+        
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 0;
+            background: var(--color-primary);
+            border-radius: 0 3px 3px 0;
+            transition: height 0.3s ease;
+        }
+        
+        .nav-link:hover::before {
+            height: 60%;
+        }
+        
+        .nav-link:hover {
+            transform: translateX(4px);
+            background: rgba(99, 102, 241, 0.1);
+        }
+        
+        /* Estado activo del nav-link */
+        .nav-link.active {
+            background: rgba(99, 102, 241, 0.2) !important;
+            color: rgb(165, 180, 252) !important; /* text-indigo-300 */
+        }
+        
+        .nav-link.active::before {
+            height: 60%;
+        }
+        
+        /* Asegurar que los nav-links tengan buen contraste por defecto */
+        .nav-link:not(.active) {
+            color: rgb(255, 255, 255) !important; /* text-white */
+        }
+        
+        /* Badges mejorados */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.375rem 0.875rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        /* Scrollbar personalizado */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.5);
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.7);
+        }
+        
+        /* Tablas mejoradas */
+        table tbody tr {
+            transition: all 0.2s ease;
+        }
+        
+        table tbody tr:hover {
+            background-color: rgba(99, 102, 241, 0.1);
+        }
+        
+        /* Dashboard cards */
+        .dashboard-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 48px rgba(99, 102, 241, 0.2);
+        }
+        
+        /* Métricas con gradiente */
+        .metric-value {
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+        
+        /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
                 position: fixed;
@@ -214,7 +366,8 @@
                 display: none;
                 position: fixed;
                 inset: 0;
-                background: rgba(0, 0, 0, 0.5);
+                background: rgba(0, 0, 0, 0.7);
+                backdrop-filter: blur(4px);
                 z-index: 40;
             }
             
@@ -223,7 +376,7 @@
             }
         }
         
-        /* Tablas responsive - convertir a cards en móvil */
+        /* Tablas responsive */
         @media (max-width: 768px) {
             .table-responsive {
                 display: none;
@@ -240,51 +393,30 @@
             }
         }
         
-        /* Scrollbar personalizado */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+        /* Formulario de oportunidad */
+        [data-view="new"].active {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
         }
         
-        ::-webkit-scrollbar-track {
-            background: var(--color-bg);
+        [data-view="new"].active form {
+            overflow-y: auto;
+            flex: 1;
         }
         
-        ::-webkit-scrollbar-thumb {
-            background: var(--color-border);
-            border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--color-text-light);
-        }
-        
-        /* Efectos de hover mejorados */
-        .nav-link {
-            transition: all 0.2s ease;
-            border-radius: 12px;
-        }
-        
-        .nav-link:hover {
-            transform: translateX(4px);
-        }
-        
-        /* Badges mejorados */
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            transition: all 0.2s ease;
-        }
-        
-        .badge:hover {
-            transform: scale(1.05);
+        /* Modal mejorado */
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
         }
         
         /* Efectos de carga */
+        .loading {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
         @keyframes pulse {
             0%, 100% {
                 opacity: 1;
@@ -293,205 +425,26 @@
                 opacity: 0.5;
             }
         }
-        
-        .loading {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        
-        /* Sin animaciones - simplificado para evitar problemas */
-        
-        /* Mejoras en tablas */
-        table tbody tr {
-            transition: all 0.2s ease;
-        }
-        
-        table tbody tr:hover {
-            background-color: rgba(99, 102, 241, 0.05);
-            transform: scale(1.01);
-        }
-        
-        /* Mejoras en inputs de fecha y select */
-        input[type="date"],
-        select {
-            cursor: pointer;
-        }
-        
-        /* Efectos de focus mejorados */
-        button:focus-visible,
-        input:focus-visible,
-        select:focus-visible,
-        textarea:focus-visible {
-            outline: 2px solid var(--color-primary);
-            outline-offset: 2px;
-        }
-        
-        /* Mejoras en el dashboard */
-        .dashboard-card {
-            background: linear-gradient(135deg, var(--color-surface) 0%, #f8fafc 100%);
-            border: 1px solid var(--color-border);
-            border-radius: 16px;
-            padding: 1.5rem;
-            transition: all 0.3s ease;
-        }
-        
-        .dashboard-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px var(--color-shadow-lg);
-        }
-        
-        /* Efectos de gradiente en números grandes */
-        .metric-value {
-            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 700;
-        }
-        
-        /* Responsive mejorado para móvil */
-        @media (max-width: 640px) {
-            .card {
-                border-radius: 12px;
-                padding: 1rem;
-            }
-            
-            h2 {
-                font-size: 1.5rem;
-            }
-            
-            .btn-primary {
-                padding: 0.75rem 1.25rem;
-                font-size: 0.875rem;
-            }
-        }
-        
-        /* Formulario de oportunidad compacto - solo cuando está activo */
-        [data-view="new"].active {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            max-height: 100%;
-            overflow: hidden;
-        }
-        
-        [data-view="new"].active .card {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            max-height: 100%;
-            overflow: hidden;
-        }
-        
-        [data-view="new"].active form {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            padding: 1rem;
-            overflow-y: auto;
-            flex: 1;
-            min-height: 0;
-        }
-        
-        /* Hacer que el formulario sea más compacto en pantallas pequeñas */
-        @media (max-height: 900px) {
-            [data-view="new"].active form {
-                gap: 0.625rem;
-                padding: 0.75rem;
-            }
-        }
-        
-        /* Ajustar main cuando está en vista new */
-        main:has([data-view="new"].active) {
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        /* Asegurar que la vista new ocupe toda la altura disponible */
-        [data-view="new"].active {
-            min-height: 0;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        /* Asegurar que el formulario siempre tenga scroll si es necesario */
-        [data-view="new"].active form {
-            overflow-y: auto !important;
-        }
-        
-        /* Secciones colapsables */
-        #links-section,
-        #notes-section {
-            transition: all 0.3s ease;
-        }
-        
-        #links-chevron,
-        #notes-chevron {
-            transition: transform 0.3s ease;
-        }
-        
-        /* Lista de costes compacta */
-        #costs-list {
-            max-height: 120px;
-            overflow-y: auto;
-        }
-        
-        @media (max-width: 768px) {
-            #costs-list {
-                max-height: 100px;
-            }
-            
-            [data-view="new"].active form {
-                padding: 0.75rem;
-                gap: 0.625rem;
-            }
-        }
-        
-        /* Inputs más compactos */
-        [data-view="new"].active .input-field {
-            padding: 0.5rem 0.75rem;
-            font-size: 0.875rem;
-        }
-        
-        [data-view="new"].active label {
-            font-size: 0.8125rem;
-            margin-bottom: 0.25rem;
-        }
-        
-        /* Reducir espacios en secciones colapsables */
-        [data-view="new"].active .border-t {
-            margin-top: 0.5rem;
-            padding-top: 0.5rem;
-        }
-        
-        /* Botones de secciones colapsables más compactos */
-        [data-view="new"].active button[onclick*="toggle"] {
-            padding: 0.25rem 0;
-        }
     </style>
 </head>
 <body class="h-screen overflow-hidden">
     <!-- Vista de Login -->
     <div data-view="login" class="flex items-center justify-center min-h-screen relative overflow-hidden">
-        <!-- Fondo con gradiente y efectos -->
-        <div class="absolute inset-0 bg-gradient-to-br from-indigo-50 via-white to-purple-50"></div>
-        <div class="absolute inset-0 opacity-30" style="background-image: radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);"></div>
-        
-        <div class="relative max-w-md w-full space-y-8 p-6 md:p-8 animate-fade-in">
+        <div class="relative max-w-md w-full space-y-8 p-6 md:p-8 animate-fade-in z-10">
             <div class="text-center">
-                <div class="inline-block p-4 bg-white rounded-2xl shadow-lg mb-6 transform hover:scale-105 transition-transform">
+                <div class="inline-block p-5 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 backdrop-blur-lg rounded-3xl shadow-2xl mb-6 transform hover:scale-105 transition-transform border border-white/10">
                     <img src="./assets/logo.png" alt="Arbitraje Gestión" class="h-16" />
                 </div>
-                <h2 class="text-4xl font-display font-bold text-gray-900 mb-2">Iniciar Sesión</h2>
-                <p class="text-gray-600">Ingresa tus credenciales para acceder</p>
+                <h2 class="text-4xl font-display font-bold text-white mb-2">Iniciar Sesión</h2>
+                <p class="text-slate-300">Ingresa tus credenciales para acceder</p>
             </div>
             <form id="login-form" class="mt-8 space-y-6 card p-8 animate-fade-in" style="animation-delay: 0.1s;">
-                <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <div id="login-error" class="hidden bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg relative" role="alert">
                     <span class="block sm:inline" id="login-error-message"></span>
                 </div>
                 <div class="space-y-4">
                     <div>
-                        <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1">
+                        <label for="login-email" class="block text-sm font-medium text-slate-300 mb-2">
                             Email
                         </label>
                         <input 
@@ -500,12 +453,12 @@
                             type="email" 
                             required 
                             autocomplete="email"
-                            class="input-field w-full placeholder-gray-400 text-gray-900" 
+                            class="input-field w-full" 
                             placeholder="tu@email.com"
                         />
                     </div>
                     <div>
-                        <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">
+                        <label for="login-password" class="block text-sm font-medium text-slate-300 mb-2">
                             Contraseña
                         </label>
                         <input 
@@ -514,7 +467,7 @@
                             type="password" 
                             required 
                             autocomplete="current-password"
-                            class="input-field w-full placeholder-gray-400 text-gray-900" 
+                            class="input-field w-full" 
                             placeholder="••••••••"
                         />
                     </div>
@@ -523,7 +476,7 @@
                     <button 
                         type="submit" 
                         id="login-submit"
-                        class="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
+                        class="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <span id="login-submit-text">Iniciar Sesión</span>
                         <span id="login-submit-loading" class="hidden">Iniciando sesión...</span>
@@ -533,68 +486,65 @@
         </div>
     </div>
 
-    <!-- Contenido principal de la aplicación (solo visible si está autenticado) -->
+    <!-- Contenido principal de la aplicación -->
     <div id="app-content" class="flex h-screen relative" style="display: none;">
         <!-- Overlay para móvil -->
         <div id="sidebar-overlay" class="sidebar-overlay" onclick="app.toggleSidebar()"></div>
         
         <!-- Sidebar -->
-        <aside id="sidebar" class="sidebar w-64 bg-white shadow-xl border-r border-gray-200 flex flex-col z-50">
+        <aside id="sidebar" class="sidebar w-64 shadow-2xl flex flex-col z-50">
             <div class="p-6 flex-1 flex flex-col">
-                <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center justify-between mb-8">
                     <button onclick="app.showView('dashboard')" class="cursor-pointer hover:opacity-80 transition-opacity focus:outline-none">
-                        <img src="./assets/logo.png" alt="Arbitraje Gestión" class="h-12" />
+                        <img src="./assets/logo.png" alt="Arbitraje Gestión" class="h-50" />
                     </button>
-                    <button id="close-sidebar" onclick="app.toggleSidebar()" class="md:hidden text-gray-500 hover:text-gray-700">
+                    <button id="close-sidebar" onclick="app.toggleSidebar()" class="md:hidden text-slate-400 hover:text-white">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
                 <nav class="space-y-1 flex-1 flex flex-col">
-                    <button data-nav="dashboard" class="nav-link w-full text-left px-4 py-3 text-sm font-medium bg-indigo-50 text-indigo-700 rounded-md transition-colors">
+                    <button data-nav="dashboard" class="nav-link w-full text-left px-4 py-3 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
                         Dashboard
                     </button>
-                    <button data-nav="opportunities" class="nav-link w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors">
+                    <button data-nav="opportunities" class="nav-link w-full text-left px-4 py-3 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
                         Oportunidades
                     </button>
                     
-                    <!-- Operaciones (Grupo padre) -->
                     <div class="mt-4 mb-2">
-                        <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        <div class="px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                             Operaciones
                         </div>
                         <div class="ml-2 space-y-1">
-                            <button data-nav="compras" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors">
+                            <button data-nav="compras" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
                                 Compras
                             </button>
-                            <button data-nav="stock" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors">
+                            <button data-nav="stock" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
                                 Stock
                             </button>
-                            <button data-nav="ventas" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors">
+                            <button data-nav="ventas" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
                                 Ventas
                             </button>
                         </div>
                     </div>
                     
-                    <!-- Configuración (Grupo padre) -->
                     <div class="mt-4 mb-2">
-                        <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        <div class="px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                             Configuración
                         </div>
                         <div class="ml-2 space-y-1">
-                            <button data-nav="channels" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors">
+                            <button data-nav="channels" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
                                 Canales
                             </button>
-                            <button data-nav="localizaciones" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors">
+                            <button data-nav="localizaciones" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
                                 Localizaciones
                             </button>
                         </div>
                     </div>
                     
-                    <!-- Botón de Logout -->
-                    <div class="mt-auto pt-4 border-t border-gray-200">
-                        <button onclick="app.logout()" class="w-full text-left px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md transition-colors">
+                    <div class="mt-auto pt-4 border-t border-slate-700">
+                        <button onclick="app.logout()" class="w-full text-left px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-lg transition-colors">
                             Cerrar Sesión
                         </button>
                     </div>
@@ -603,18 +553,18 @@
         </aside>
 
         <!-- Botón hamburguesa para móvil -->
-        <button id="menu-toggle" onclick="app.toggleSidebar()" class="md:hidden fixed top-4 left-4 z-30 bg-white p-2 rounded-lg shadow-lg">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button id="menu-toggle" onclick="app.toggleSidebar()" class="md:hidden fixed top-4 left-4 z-30 bg-slate-800/90 backdrop-blur-lg p-2 rounded-lg shadow-lg border border-white/10">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
         </button>
         
         <main class="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 pt-16 md:pt-6">
-        <div data-view="opportunities" class="w-full h-full">
-            <div class="w-full h-full">
+            <!-- Vista de Oportunidades -->
+            <div data-view="opportunities" class="w-full h-full">
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-2xl font-display font-bold text-gray-900">Oportunidades</h2>
+                        <h2 class="text-3xl font-display font-bold text-white">Oportunidades</h2>
                         <button onclick="app.showView('new')" class="btn-primary text-sm">
                             + Nueva Oportunidad
                         </button>
@@ -624,121 +574,116 @@
                 <div class="card">
                     <div class="p-6">
                         <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-medium text-gray-900">Oportunidades</h3>
+                            <h3 class="text-lg font-medium text-white">Oportunidades</h3>
                             <div class="flex gap-2">
-                                <select id="filter-status" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <select id="filter-status" class="input-field text-sm">
                                     <option value="">Todos los estados</option>
                                     <option value="detectada">Detectada</option>
                                     <option value="descartada">Descartada</option>
                                     <option value="convertida">Convertida</option>
                                 </select>
-                                <input type="text" id="search-input" placeholder="Buscar..." class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                <input type="text" id="search-input" placeholder="Buscar..." class="input-field text-sm">
                             </div>
                         </div>
-                        <!-- Cards para móvil -->
                         <div id="opportunities-cards" class="cards-responsive space-y-4 mb-4"></div>
                         
-                        <!-- Tabla para desktop -->
                         <div class="table-responsive overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
+                            <table class="min-w-full divide-y divide-slate-700">
+                                <thead class="bg-slate-800/50">
                                     <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Origen → Destino</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precios</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Margen</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rentabilidad</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Producto</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Origen → Destino</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Precios</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Margen</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Rentabilidad</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Estado</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Acciones</th>
                                     </tr>
                                 </thead>
-                                <tbody id="opportunities-table" class="bg-white divide-y divide-gray-200">
+                                <tbody id="opportunities-table" class="bg-slate-800/30 divide-y divide-slate-700">
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div data-view="dashboard" class="w-full h-full">
-            <div class="space-y-6">
-                <h2 class="text-2xl font-display font-bold text-gray-900">Dashboard de Negocio</h2>
-                
-                <!-- Immobilized Capital KPI -->
-                <div class="dashboard-card">
-                    <h3 class="text-lg font-display font-semibold text-gray-900 mb-4">Capital Inmovilizado</h3>
-                    <div class="text-4xl font-display font-bold metric-value" id="dashboard-immobilized-capital">€0.00</div>
-                    <p class="text-sm text-gray-500 mt-2">Valor total del stock actual (unidades restantes × precio de compra)</p>
-                </div>
+            <!-- Vista Dashboard -->
+            <div data-view="dashboard" class="w-full h-full">
+                <div class="space-y-6">
+                    <h2 class="text-3xl font-display font-bold text-white">Dashboard de Negocio</h2>
+                    
+                    <div class="dashboard-card">
+                        <h3 class="text-lg font-display font-semibold text-white mb-4">Capital Inmovilizado</h3>
+                        <div class="text-5xl font-display font-bold metric-value" id="dashboard-immobilized-capital">€0.00</div>
+                        <p class="text-sm text-slate-300 mt-2">Valor total del stock actual (unidades restantes × precio de compra)</p>
+                    </div>
 
-                <!-- Sales Over Time Chart -->
-                <div class="dashboard-card">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-medium text-gray-900">Ventas en el Tiempo</h3>
-                        <div class="flex gap-2">
-                            <select id="sales-grouping" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                <option value="day">Por Día</option>
-                                <option value="week">Por Semana</option>
-                                <option value="month" selected>Por Mes</option>
-                            </select>
-                            <select id="sales-date-range" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    <div class="dashboard-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-medium text-white">Ventas en el Tiempo</h3>
+                            <div class="flex gap-2">
+                                <select id="sales-grouping" class="input-field text-sm">
+                                    <option value="day">Por Día</option>
+                                    <option value="week">Por Semana</option>
+                                    <option value="month" selected>Por Mes</option>
+                                </select>
+                                <select id="sales-date-range" class="input-field text-sm">
+                                    <option value="last-6-months" selected>Últimos 6 meses</option>
+                                    <option value="last-12-months">Últimos 12 meses</option>
+                                    <option value="custom">Rango personalizado</option>
+                                </select>
+                                <div id="sales-custom-range" class="hidden flex gap-2">
+                                    <input type="date" id="sales-start-date" class="input-field text-sm">
+                                    <input type="date" id="sales-end-date" class="input-field text-sm">
+                                    <button onclick="app.loadSalesChart()" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Aplicar</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="sales-chart-container" class="h-64 relative">
+                            <div class="absolute inset-0 flex items-center justify-center text-slate-400">Cargando datos...</div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-medium text-white">Márgenes</h3>
+                            <select id="margins-date-range" class="input-field text-sm">
                                 <option value="last-6-months" selected>Últimos 6 meses</option>
                                 <option value="last-12-months">Últimos 12 meses</option>
                                 <option value="custom">Rango personalizado</option>
                             </select>
-                            <div id="sales-custom-range" class="hidden flex gap-2">
-                                <input type="date" id="sales-start-date" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                <input type="date" id="sales-end-date" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                <button onclick="app.loadSalesChart()" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">Aplicar</button>
+                        </div>
+                        <div class="hidden" id="margins-custom-range">
+                            <div class="flex gap-2 mb-4">
+                                <input type="date" id="margins-start-date" class="input-field text-sm">
+                                <input type="date" id="margins-end-date" class="input-field text-sm">
+                                <button onclick="app.loadMarginsChart()" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Aplicar</button>
                             </div>
                         </div>
-                    </div>
-                    <div id="sales-chart-container" class="h-64 relative">
-                        <div class="absolute inset-0 flex items-center justify-center text-gray-500">Cargando datos...</div>
-                    </div>
-                </div>
-
-                <!-- Margins Chart -->
-                <div class="dashboard-card">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-medium text-gray-900">Márgenes</h3>
-                        <select id="margins-date-range" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                            <option value="last-6-months" selected>Últimos 6 meses</option>
-                            <option value="last-12-months">Últimos 12 meses</option>
-                            <option value="custom">Rango personalizado</option>
-                        </select>
-                    </div>
-                    <div class="hidden" id="margins-custom-range">
-                        <div class="flex gap-2 mb-4">
-                            <input type="date" id="margins-start-date" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                            <input type="date" id="margins-end-date" class="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                            <button onclick="app.loadMarginsChart()" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">Aplicar</button>
+                        <div id="margins-chart-container" class="h-64 relative">
+                            <div class="absolute inset-0 flex items-center justify-center text-slate-400">Cargando datos...</div>
                         </div>
-                    </div>
-                    <div id="margins-chart-container" class="h-64 relative">
-                        <div class="absolute inset-0 flex items-center justify-center text-gray-500">Cargando datos...</div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div data-view="new" class="w-full h-full">
-            <div class="card h-full flex flex-col">
-                <div class="p-4 md:p-5 flex-shrink-0 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
-                    <h2 class="text-xl md:text-2xl font-display font-bold text-gray-900" id="form-title">Nueva Oportunidad</h2>
-                </div>
-                <form id="opportunity-form" class="flex-1 overflow-y-auto p-4 md:p-5 space-y-4">
+            <!-- Vista Nueva Oportunidad -->
+            <div data-view="new" class="w-full h-full">
+                <div class="card h-full flex flex-col">
+                    <div class="p-4 md:p-5 flex-shrink-0 border-b border-slate-700 bg-gradient-to-r from-indigo-500/10 to-purple-500/10">
+                        <h2 class="text-xl md:text-2xl font-display font-bold text-white" id="form-title">Nueva Oportunidad</h2>
+                    </div>
+                    <form id="opportunity-form" class="flex-1 overflow-y-auto p-4 md:p-5 space-y-4">
                         <input type="hidden" id="opportunity-id">
                         
                         <div>
-                            <label for="product-name" class="block text-sm font-medium text-gray-700 mb-1">Producto *</label>
+                            <label for="product-name" class="block text-sm font-medium text-slate-300 mb-1">Producto *</label>
                             <input type="text" id="product-name" required class="input-field w-full" placeholder="Nombre del producto">
                         </div>
 
-                        <!-- Enlaces colapsables (ocultos por defecto) -->
-                        <div class="border-t border-gray-100 pt-2">
-                            <button type="button" onclick="app.toggleLinksSection()" class="flex items-center justify-between w-full text-left text-xs text-gray-400 hover:text-gray-600 transition-colors group py-1">
+                        <div class="border-t border-slate-700 pt-2">
+                            <button type="button" onclick="app.toggleLinksSection()" class="flex items-center justify-between w-full text-left text-xs text-slate-400 hover:text-slate-300 transition-colors group py-1">
                                 <span class="flex items-center gap-1.5">
                                     <svg class="w-3.5 h-3.5 transition-transform" id="links-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -748,11 +693,11 @@
                             </button>
                             <div id="links-section" class="hidden mt-2 space-y-2">
                                 <div>
-                                    <label for="offer-link" class="block text-xs font-medium text-gray-400 mb-0.5">Enlace de la Oferta</label>
+                                    <label for="offer-link" class="block text-xs font-medium text-slate-300 mb-0.5">Enlace de la Oferta</label>
                                     <input type="url" id="offer-link" placeholder="https://..." class="input-field w-full text-xs py-1.5">
                                 </div>
                                 <div>
-                                    <label for="market-price-link" class="block text-xs font-medium text-gray-400 mb-0.5">Enlace de Precios de Mercado</label>
+                                    <label for="market-price-link" class="block text-xs font-medium text-slate-300 mb-0.5">Enlace de Precios de Mercado</label>
                                     <input type="url" id="market-price-link" placeholder="https://..." class="input-field w-full text-xs py-1.5">
                                 </div>
                             </div>
@@ -760,84 +705,82 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label for="origin-channel-select" class="block text-sm font-medium text-gray-700 mb-1">Canal Origen *</label>
+                                <label for="origin-channel-select" class="block text-sm font-medium text-slate-300 mb-1">Canal Origen *</label>
                                 <select id="origin-channel-select" required class="input-field w-full">
                                     <option value="">Selecciona un canal</option>
                                 </select>
                                 <input type="hidden" id="origin-channel-id">
                             </div>
                             <div>
-                                <label for="origin-price" class="block text-sm font-medium text-gray-700 mb-1">Precio Compra (€) *</label>
+                                <label for="origin-price" class="block text-sm font-medium text-slate-300 mb-1">Precio Compra (€) *</label>
                                 <input type="number" id="origin-price" step="0.01" min="0" required class="input-field w-full">
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label for="dest-channel-select" class="block text-sm font-medium text-gray-700 mb-1">Canal Destino *</label>
+                                <label for="dest-channel-select" class="block text-sm font-medium text-slate-300 mb-1">Canal Destino *</label>
                                 <select id="dest-channel-select" required class="input-field w-full">
                                     <option value="">Selecciona un canal</option>
                                 </select>
                                 <input type="hidden" id="dest-channel-id">
                             </div>
                             <div>
-                                <label for="dest-price" class="block text-sm font-medium text-gray-700 mb-1">Precio Venta Estimado (€) *</label>
+                                <label for="dest-price" class="block text-sm font-medium text-slate-300 mb-1">Precio Venta Estimado (€) *</label>
                                 <input type="number" id="dest-price" step="0.01" min="0" required class="input-field w-full">
                             </div>
                         </div>
 
                         <div>
                             <div class="flex justify-between items-center mb-1.5">
-                                <label class="block text-sm font-medium text-gray-700">Costes (opcional)</label>
-                                <button type="button" onclick="app.addCost()" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">+ Añadir</button>
+                                <label class="block text-sm font-medium text-slate-300">Costes (opcional)</label>
+                                <button type="button" onclick="app.addCost()" class="text-xs text-indigo-400 hover:text-indigo-300 font-medium">+ Añadir</button>
                             </div>
                             <div id="costs-list" class="space-y-1.5 max-h-24 overflow-y-auto mb-1.5">
                             </div>
-                            <div id="costs-breakdown" class="p-2 bg-blue-50 rounded-lg border border-blue-200 text-xs">
+                            <div id="costs-breakdown" class="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/30 text-xs">
                                 <div class="flex justify-between items-center">
-                                    <span class="font-medium text-blue-900">Total Costes:</span>
-                                    <span id="costs-total" class="font-bold text-blue-900">€0.00</span>
+                                    <span class="font-medium text-indigo-300">Total Costes:</span>
+                                    <span id="costs-total" class="font-bold text-indigo-200">€0.00</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Cálculos compactos -->
-                        <div class="bg-gradient-to-br from-indigo-50 to-purple-50 p-2.5 rounded-lg border border-indigo-100 shadow-sm">
+                        <div class="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-2.5 rounded-lg border border-indigo-500/30 shadow-sm">
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                                 <div class="text-center">
-                                    <div class="text-gray-600 mb-0.5 text-[10px]">Margen Bruto</div>
-                                    <div id="calc-margin-bruto" class="font-display font-bold text-indigo-700 text-sm">€0.00</div>
+                                    <div class="text-slate-300 mb-0.5 text-[10px]">Margen Bruto</div>
+                                    <div id="calc-margin-bruto" class="font-display font-bold text-indigo-300 text-sm">€0.00</div>
                                 </div>
                                 <div class="text-center">
-                                    <div class="text-gray-600 mb-0.5 text-[10px]">Costes</div>
-                                    <div id="calc-costes-totales" class="font-display font-bold text-gray-700 text-sm">€0.00</div>
+                                    <div class="text-slate-300 mb-0.5 text-[10px]">Costes</div>
+                                    <div id="calc-costes-totales" class="font-display font-bold text-slate-300 text-sm">€0.00</div>
                                 </div>
                                 <div class="text-center">
-                                    <div class="text-gray-600 mb-0.5 text-[10px]">Margen Neto</div>
-                                    <div id="calc-margin-neto" class="font-display font-bold text-green-600 text-sm">€0.00</div>
+                                    <div class="text-slate-300 mb-0.5 text-[10px]">Margen Neto</div>
+                                    <div id="calc-margin-neto" class="font-display font-bold text-green-400 text-sm">€0.00</div>
                                 </div>
                                 <div class="text-center">
-                                    <div class="text-gray-600 mb-0.5 text-[10px]">Rentabilidad</div>
-                                    <div id="calc-rentabilidad" class="font-display font-bold text-purple-600 text-sm">0%</div>
+                                    <div class="text-slate-300 mb-0.5 text-[10px]">Rentabilidad</div>
+                                    <div id="calc-rentabilidad" class="font-display font-bold text-purple-300 text-sm">0%</div>
                                 </div>
                             </div>
-                            <div id="calc-real-section" class="hidden mt-2 pt-2 border-t border-indigo-200">
+                            <div id="calc-real-section" class="hidden mt-2 pt-2 border-t border-indigo-500/30">
                                 <div class="grid grid-cols-2 gap-2 text-xs">
                                     <div class="text-center">
-                                        <div class="text-gray-600 mb-0.5 text-[10px]">Margen Neto Real</div>
-                                        <div id="calc-margin-neto-real" class="font-display font-bold text-green-600 text-sm">€0.00</div>
+                                        <div class="text-slate-300 mb-0.5 text-[10px]">Margen Neto Real</div>
+                                        <div id="calc-margin-neto-real" class="font-display font-bold text-green-400 text-sm">€0.00</div>
                                     </div>
                                     <div class="text-center">
-                                        <div class="text-gray-600 mb-0.5 text-[10px]">Rentabilidad Real</div>
-                                        <div id="calc-rentabilidad-real" class="font-display font-bold text-purple-600 text-sm">0%</div>
+                                        <div class="text-slate-300 mb-0.5 text-[10px]">Rentabilidad Real</div>
+                                        <div id="calc-rentabilidad-real" class="font-display font-bold text-purple-300 text-sm">0%</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Notas colapsables (ocultas por defecto) -->
-                        <div class="border-t border-gray-100 pt-2">
-                            <button type="button" onclick="app.toggleNotesSection()" class="flex items-center justify-between w-full text-left text-xs text-gray-400 hover:text-gray-600 transition-colors group py-1">
+                        <div class="border-t border-slate-700 pt-2">
+                            <button type="button" onclick="app.toggleNotesSection()" class="flex items-center justify-between w-full text-left text-xs text-slate-400 hover:text-slate-300 transition-colors group py-1">
                                 <span class="flex items-center gap-1.5">
                                     <svg class="w-3.5 h-3.5 transition-transform" id="notes-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -849,511 +792,503 @@
                                 <textarea id="notes" rows="2" class="input-field w-full text-xs py-1.5" placeholder="Añade notas adicionales..."></textarea>
                             </div>
                         </div>
-
                     </form>
-                </div>
-                <div class="flex-shrink-0 border-t border-gray-200 p-3 md:p-4 bg-white">
-                    <div class="flex justify-end gap-2 md:gap-3">
-                        <button type="button" onclick="app.showView('dashboard')" class="px-3 md:px-4 py-2 border border-gray-300 rounded-lg text-xs md:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
-                            Cancelar
-                        </button>
-                        <button type="submit" form="opportunity-form" class="btn-primary text-xs md:text-sm px-3 md:px-4">
-                            Guardar
-                        </button>
+                    <div class="flex-shrink-0 border-t border-slate-700 p-3 md:p-4 bg-slate-800/50">
+                        <div class="flex justify-end gap-2 md:gap-3">
+                            <button type="button" onclick="app.showView('dashboard')" class="px-3 md:px-4 py-2 border border-slate-600 rounded-lg text-xs md:text-sm font-medium text-slate-300 bg-slate-800/50 hover:bg-slate-700/50 transition-colors">
+                                Cancelar
+                            </button>
+                            <button type="submit" form="opportunity-form" class="btn-primary text-xs md:text-sm px-3 md:px-4">
+                                Guardar
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div data-view="detail" class="w-full">
-            <div class="bg-white shadow rounded-lg">
-                <div class="p-6">
-                    <div class="flex justify-between items-start mb-6">
-                        <div class="flex-1 mr-4">
-                            <label for="detail-product-name" class="block text-sm font-medium text-gray-700 mb-2">Nombre del Producto</label>
-                            <input type="text" id="detail-product-name" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-2xl font-bold text-gray-900" placeholder="Nombre del producto">
+            <!-- Vista Detalle -->
+            <div data-view="detail" class="w-full">
+                <div class="card">
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-6">
+                            <div class="flex-1 mr-4">
+                                <label for="detail-product-name" class="block text-sm font-medium text-slate-300 mb-2">Nombre del Producto</label>
+                                <input type="text" id="detail-product-name" class="input-field w-full text-2xl font-bold" placeholder="Nombre del producto">
+                            </div>
+                            <button onclick="app.showView('dashboard')" class="text-slate-400 hover:text-white">
+                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
-                        <button onclick="app.showView('dashboard')" class="text-gray-400 hover:text-gray-500">
-                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <div>
-                            <label for="detail-origin-channel-select" class="block text-sm font-medium text-gray-700 mb-2">Canal Origen</label>
-                            <select id="detail-origin-channel-select" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                <option value="">Selecciona un canal</option>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label for="detail-origin-channel-select" class="block text-sm font-medium text-slate-300 mb-2">Canal Origen</label>
+                                <select id="detail-origin-channel-select" class="input-field w-full">
+                                    <option value="">Selecciona un canal</option>
+                                </select>
+                                <input type="hidden" id="detail-origin-channel-id">
+                                <label for="detail-origin-price" class="block text-sm font-medium text-slate-300 mb-2 mt-3">Precio de Compra</label>
+                                <input type="number" id="detail-origin-price" step="0.01" min="0" class="input-field w-full" placeholder="0.00">
+                            </div>
+                            <div>
+                                <label for="detail-dest-channel-select" class="block text-sm font-medium text-slate-300 mb-2">Canal Destino</label>
+                                <select id="detail-dest-channel-select" class="input-field w-full">
+                                    <option value="">Selecciona un canal</option>
+                                </select>
+                                <input type="hidden" id="detail-dest-channel-id">
+                                <label for="detail-dest-price" class="block text-sm font-medium text-slate-300 mb-2 mt-3">Precio de Venta Estimado</label>
+                                <input type="number" id="detail-dest-price" step="0.01" min="0" class="input-field w-full" placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <div class="mb-6 border-t border-slate-700 pt-6">
+                            <h3 class="text-sm font-medium text-slate-300 mb-3">Enlaces</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="detail-offer-link" class="block text-sm font-medium text-slate-300 mb-2">Enlace de la Oferta</label>
+                                    <input type="url" id="detail-offer-link" class="input-field w-full" placeholder="https://...">
+                                </div>
+                                <div>
+                                    <label for="detail-market-price-link" class="block text-sm font-medium text-slate-300 mb-2">Enlace de Precios de Mercado</label>
+                                    <input type="url" id="detail-market-price-link" class="input-field w-full" placeholder="https://...">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h3 class="text-sm font-medium text-slate-300 mb-3">Métricas Estimadas</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div class="bg-indigo-500/10 border border-indigo-500/30 p-4 rounded-lg">
+                                    <div class="text-xs text-indigo-300 font-medium mb-1">Margen Bruto Estimado</div>
+                                    <div class="text-xl font-bold text-indigo-200" id="detail-margin-bruto">€0.00</div>
+                                </div>
+                                <div class="bg-slate-700/50 p-4 rounded-lg">
+                                    <div class="text-xs text-slate-300 mb-1">Costes Totales</div>
+                                    <div class="text-xl font-bold text-white" id="detail-costes-totales">€0.00</div>
+                                </div>
+                                <div class="bg-indigo-500/10 border border-indigo-500/30 p-4 rounded-lg">
+                                    <div class="text-xs text-indigo-300 font-medium mb-1">Margen Neto Estimado</div>
+                                    <div class="text-xl font-bold text-indigo-200" id="detail-margin-neto">€0.00</div>
+                                </div>
+                                <div class="bg-indigo-500/10 border border-indigo-500/30 p-4 rounded-lg">
+                                    <div class="text-xs text-indigo-300 font-medium mb-1">Rentabilidad Estimada</div>
+                                    <div class="text-xl font-bold text-indigo-200" id="detail-rentabilidad">0%</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-6" id="detail-real-section" style="display: none;">
+                            <h3 class="text-sm font-medium text-slate-300 mb-3">Métricas Reales</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div class="bg-green-500/10 border border-green-500/30 p-4 rounded-lg">
+                                    <div class="text-xs text-green-300 font-medium mb-1">Margen Neto Real</div>
+                                    <div class="text-xl font-bold text-green-200" id="detail-margin-neto-real">€0.00</div>
+                                </div>
+                                <div class="bg-green-500/10 border border-green-500/30 p-4 rounded-lg">
+                                    <div class="text-xs text-green-300 font-medium mb-1">Rentabilidad Real</div>
+                                    <div class="text-xl font-bold text-green-200" id="detail-rentabilidad-real">0%</div>
+                                </div>
+                                <div class="bg-yellow-500/10 border border-yellow-500/30 p-4 rounded-lg">
+                                    <div class="text-xs text-yellow-300 font-medium mb-1">Diferencia</div>
+                                    <div class="text-xl font-bold text-yellow-200" id="detail-diferencia">€0.00</div>
+                                    <div class="text-xs text-slate-300 mt-1" id="detail-diferencia-label">Real - Estimado</div>
+                                </div>
+                                <div class="bg-slate-700/50 p-4 rounded-lg">
+                                    <div class="text-xs text-slate-300 mb-1">Precisión</div>
+                                    <div class="text-xl font-bold text-white" id="detail-precision">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <label for="detail-status" class="block text-sm font-medium text-slate-300 mb-2">Estado</label>
+                            <select id="detail-status" class="input-field w-full">
+                                <option value="detectada">Detectada</option>
+                                <option value="descartada">Descartada</option>
+                                <option value="convertida">Convertida</option>
                             </select>
-                            <input type="hidden" id="detail-origin-channel-id">
-                            <label for="detail-origin-price" class="block text-sm font-medium text-gray-700 mb-2 mt-3">Precio de Compra</label>
-                            <input type="number" id="detail-origin-price" step="0.01" min="0" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="0.00">
                         </div>
-                        <div>
-                            <label for="detail-dest-channel-select" class="block text-sm font-medium text-gray-700 mb-2">Canal Destino</label>
-                            <select id="detail-dest-channel-select" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                                <option value="">Selecciona un canal</option>
-                            </select>
-                            <input type="hidden" id="detail-dest-channel-id">
-                            <label for="detail-dest-price" class="block text-sm font-medium text-gray-700 mb-2 mt-3">Precio de Venta Estimado</label>
-                            <input type="number" id="detail-dest-price" step="0.01" min="0" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="0.00">
-                        </div>
-                    </div>
 
-                    <div class="mb-6 border-t border-gray-200 pt-6">
-                        <h3 class="text-sm font-medium text-gray-700 mb-3">Enlaces</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="detail-offer-link" class="block text-sm font-medium text-gray-700 mb-2">Enlace de la Oferta</label>
-                                <input type="url" id="detail-offer-link" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="https://...">
-                            </div>
-                            <div>
-                                <label for="detail-market-price-link" class="block text-sm font-medium text-gray-700 mb-2">Enlace de Precios de Mercado</label>
-                                <input type="url" id="detail-market-price-link" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="https://...">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-6">
-                        <h3 class="text-sm font-medium text-gray-700 mb-3">Métricas Estimadas</h3>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                                <div class="text-xs text-blue-600 font-medium mb-1">Margen Bruto Estimado</div>
-                                <div class="text-xl font-bold text-blue-900" id="detail-margin-bruto">€0.00</div>
-                            </div>
-                            <div class="bg-gray-50 p-4 rounded-lg">
-                                <div class="text-xs text-gray-600 mb-1">Costes Totales</div>
-                                <div class="text-xl font-bold text-gray-900" id="detail-costes-totales">€0.00</div>
-                            </div>
-                            <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                                <div class="text-xs text-blue-600 font-medium mb-1">Margen Neto Estimado</div>
-                                <div class="text-xl font-bold text-blue-900" id="detail-margin-neto">€0.00</div>
-                            </div>
-                            <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                                <div class="text-xs text-blue-600 font-medium mb-1">Rentabilidad Estimada</div>
-                                <div class="text-xl font-bold text-blue-900" id="detail-rentabilidad">0%</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-6" id="detail-real-section" style="display: none;">
-                        <h3 class="text-sm font-medium text-gray-700 mb-3">Métricas Reales</h3>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div class="bg-green-50 border border-green-200 p-4 rounded-lg">
-                                <div class="text-xs text-green-600 font-medium mb-1">Margen Neto Real</div>
-                                <div class="text-xl font-bold text-green-900" id="detail-margin-neto-real">€0.00</div>
-                            </div>
-                            <div class="bg-green-50 border border-green-200 p-4 rounded-lg">
-                                <div class="text-xs text-green-600 font-medium mb-1">Rentabilidad Real</div>
-                                <div class="text-xl font-bold text-green-900" id="detail-rentabilidad-real">0%</div>
-                            </div>
-                            <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-                                <div class="text-xs text-yellow-700 font-medium mb-1">Diferencia</div>
-                                <div class="text-xl font-bold text-yellow-900" id="detail-diferencia">€0.00</div>
-                                <div class="text-xs text-gray-500 mt-1" id="detail-diferencia-label">Real - Estimado</div>
-                            </div>
-                            <div class="bg-gray-50 p-4 rounded-lg">
-                                <div class="text-xs text-gray-600 mb-1">Precisión</div>
-                                <div class="text-xl font-bold text-gray-900" id="detail-precision">-</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-6">
-                        <label for="detail-status" class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-                        <select id="detail-status" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                            <option value="detectada">Detectada</option>
-                            <option value="descartada">Descartada</option>
-                            <option value="convertida">Convertida</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-6">
-                        <div class="flex justify-between items-center mb-2">
-                            <label class="block text-sm font-medium text-gray-700">Costes</label>
-                            <button type="button" onclick="app.addCostDetail()" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">+ Añadir Coste</button>
-                        </div>
-                        <div id="detail-costs-list" class="space-y-3">
-                        </div>
-                        <div id="detail-costs-breakdown" class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                            <div class="text-xs font-medium text-blue-900 mb-2">Desglose de Costes:</div>
-                            <div id="detail-costs-breakdown-content" class="text-xs text-blue-800 space-y-1">
-                                <div>Ningún coste añadido</div>
-                            </div>
-                            <div class="mt-2 pt-2 border-t border-blue-200">
-                                <span class="text-xs font-semibold text-blue-900">Total Costes: </span>
-                                <span id="detail-costs-total" class="text-xs font-bold text-blue-900">€0.00</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-6">
-                        <label for="detail-notes" class="block text-sm font-medium text-gray-700 mb-2">Notas</label>
-                        <textarea id="detail-notes" rows="4" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
-                    </div>
-
-                    <div class="flex justify-end space-x-3">
-                        <button onclick="app.showView('dashboard')" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                            Volver
-                        </button>
-                        <button onclick="app.saveDetail()" class="btn-primary text-sm">
-                            Guardar Cambios
-                        </button>
-                        <button onclick="app.deleteOpportunity()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">
-                            Eliminar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div data-view="channels" class="w-full h-full">
-            <div class="w-full h-full">
-                <div class="mb-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold text-gray-900">Gestión de Canales</h2>
-                    <button onclick="app.showChannelForm()" class="btn-primary text-sm">
-                        + Nuevo Canal
-                    </button>
-                </div>
-            </div>
-
-            <div class="bg-white shadow rounded-lg">
-                <div class="p-6">
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Costes Origen</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Costes Destino</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="channels-table" class="bg-white divide-y divide-gray-200">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            </div>
-        </div>
-
-        <div data-view="localizaciones" class="w-full h-full">
-            <div class="w-full h-full">
-                <div class="mb-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold text-gray-900">Gestión de Localizaciones</h2>
-                    <button onclick="app.showLocalizacionForm()" class="btn-primary text-sm">
-                        + Nueva Localización
-                    </button>
-                </div>
-            </div>
-
-            <div class="bg-white shadow rounded-lg">
-                <div class="p-6">
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="localizaciones-table" class="bg-white divide-y divide-gray-200">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div data-view="stock" class="w-full h-full">
-            <div class="w-full h-full">
-                <div class="card">
-                <div class="p-6">
-                    <h2 class="text-2xl font-display font-bold text-gray-900 mb-6">Stock Disponible</h2>
-                    <!-- Cards para móvil -->
-                    <div id="stock-cards" class="cards-responsive space-y-4 mb-4"></div>
-                    <!-- Tabla para desktop -->
-                    <div class="table-responsive overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Canal Compra</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coste Unitario</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidades (Disponibles/Total)</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Total Inmovilizado</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Compra</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localización</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="stock-table" class="bg-white divide-y divide-gray-200">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            </div>
-        </div>
-
-        <div data-view="compras" class="w-full h-full">
-            <div class="w-full h-full">
-                <div class="card">
-                <div class="p-6">
-                    <h2 class="text-2xl font-display font-bold text-gray-900 mb-6">Compras</h2>
-                    <!-- Cards para móvil -->
-                    <div id="compras-cards" class="cards-responsive space-y-4 mb-4"></div>
-                    <!-- Tabla para desktop -->
-                    <div class="table-responsive overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Canal Origen</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidades</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Unitario</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Compra</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Desde Oportunidad</th>
-                                </tr>
-                            </thead>
-                            <tbody id="compras-table" class="bg-white divide-y divide-gray-200">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            </div>
-        </div>
-
-        <div data-view="ventas" class="w-full h-full">
-            <div class="w-full h-full">
-                <div class="card">
-                <div class="p-6">
-                    <h2 class="text-2xl font-display font-bold text-gray-900 mb-6">Ventas</h2>
-                    <!-- Cards para móvil -->
-                    <div id="ventas-cards" class="cards-responsive space-y-4 mb-4"></div>
-                    <!-- Tabla para desktop -->
-                    <div class="table-responsive overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Canal Destino</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidades</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Unitario</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Venta</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Margen</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ventas-table" class="bg-white divide-y divide-gray-200">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            </div>
-        </div>
-
-        <!-- Detalle de Venta -->
-        <div data-view="venta-detail" class="w-full h-full">
-            <div class="bg-white shadow rounded-lg h-full overflow-y-auto">
-                <div class="p-6">
-                    <div class="flex justify-between items-start mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900" id="venta-detail-product-name">-</h2>
-                        <button onclick="app.showView('ventas')" class="text-gray-400 hover:text-gray-500">
-                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                        <div>
-                            <h3 class="text-sm font-medium text-gray-500 mb-2">Origen</h3>
-                            <p class="text-sm text-gray-500">Canal</p>
-                            <p class="text-lg font-semibold text-gray-900" id="venta-detail-origin-channel">-</p>
-                            <p class="text-sm text-gray-500 mt-2">Fecha Compra</p>
-                            <p class="text-sm text-gray-900" id="venta-detail-fecha-compra">-</p>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-medium text-gray-500 mb-2">Destino</h3>
-                            <p class="text-sm text-gray-500">Canal</p>
-                            <p class="text-lg font-semibold text-gray-900" id="venta-detail-dest-channel">-</p>
-                            <p class="text-sm text-gray-500 mt-2">Fecha Venta</p>
-                            <p class="text-sm text-gray-900" id="venta-detail-fecha-venta">-</p>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-medium text-gray-500 mb-2">Resumen</h3>
-                            <p class="text-sm text-gray-500">Unidades Vendidas</p>
-                            <p class="text-lg font-semibold text-gray-900" id="venta-detail-unidades">0</p>
-                            <p class="text-sm text-gray-500 mt-2">Precio Compra Unitario</p>
-                            <p class="text-sm text-gray-900" id="venta-detail-precio-compra">€0.00</p>
-                            <p class="text-sm text-gray-500 mt-2">Precio Venta Unitario</p>
-                            <p class="text-sm text-gray-900" id="venta-detail-precio-venta">€0.00</p>
-                        </div>
-                    </div>
-
-                    <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
+                        <div class="mb-6">
                             <div class="flex justify-between items-center mb-2">
-                                <h3 class="text-sm font-medium text-gray-700">Costes de Compra (asignados a esta venta)</h3>
-                                <button type="button" onclick="app.addVentaCost('compra')" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
-                                    + Añadir Coste
-                                </button>
+                                <label class="block text-sm font-medium text-slate-300">Costes</label>
+                                <button type="button" onclick="app.addCostDetail()" class="text-sm text-indigo-400 hover:text-indigo-300 font-medium">+ Añadir Coste</button>
                             </div>
-                            <div id="venta-compra-costs-list" class="space-y-3">
+                            <div id="detail-costs-list" class="space-y-3">
                             </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <h3 class="text-sm font-medium text-gray-700">Costes de Venta</h3>
-                                <button type="button" onclick="app.addVentaCost('venta')" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
-                                    + Añadir Coste
-                                </button>
-                            </div>
-                            <div id="venta-venta-costs-list" class="space-y-3">
+                            <div id="detail-costs-breakdown" class="mt-4 p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/30">
+                                <div class="text-xs font-medium text-indigo-300 mb-2">Desglose de Costes:</div>
+                                <div id="detail-costs-breakdown-content" class="text-xs text-indigo-200 space-y-1">
+                                    <div>Ningún coste añadido</div>
+                                </div>
+                                <div class="mt-2 pt-2 border-t border-indigo-500/30">
+                                    <span class="text-xs font-semibold text-indigo-300">Total Costes: </span>
+                                    <span id="detail-costs-total" class="text-xs font-bold text-indigo-200">€0.00</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="mb-6 bg-gray-50 p-4 rounded-lg">
-                        <h3 class="text-sm font-medium text-gray-700 mb-3">Métricas de la Venta</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                            <div>
-                                <p class="text-gray-500">Coste Total Asignado a la Venta</p>
-                                <p class="text-lg font-semibold text-gray-900" id="venta-detail-total-compra">€0.00</p>
-                            </div>
-                            <div>
-                                <p class="text-gray-500">Ingresos Brutos</p>
-                                <p class="text-lg font-semibold text-gray-900" id="venta-detail-total-venta-bruta">€0.00</p>
-                            </div>
-                            <div>
-                                <p class="text-gray-500">Costes de Venta</p>
-                                <p class="text-lg font-semibold text-gray-900" id="venta-detail-total-costes-venta">€0.00</p>
-                            </div>
+                        <div class="mb-6">
+                            <label for="detail-notes" class="block text-sm font-medium text-slate-300 mb-2">Notas</label>
+                            <textarea id="detail-notes" rows="4" class="input-field w-full"></textarea>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mt-4">
-                            <div>
-                                <p class="text-gray-500">Coste de Compra Proporcional</p>
-                                <p class="text-lg font-semibold text-gray-900" id="venta-detail-total-costes-compra">€0.00</p>
-                            </div>
-                            <div>
-                                <p class="text-gray-500">Margen Neto</p>
-                                <p class="text-lg font-semibold text-green-600" id="venta-detail-margin-neto">€0.00</p>
-                            </div>
-                            <div>
-                                <p class="text-gray-500">Rentabilidad</p>
-                                <p class="text-lg font-semibold text-green-600" id="venta-detail-rentabilidad">0%</p>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="flex justify-end space-x-3">
-                        <button onclick="app.showView('ventas')" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                            Volver
-                        </button>
-                        <button onclick="app.saveVentaDetail()" class="btn-primary text-sm">
-                            Guardar Cambios
-                        </button>
+                        <div class="flex justify-end space-x-3">
+                            <button onclick="app.showView('dashboard')" class="px-4 py-2 border border-slate-600 rounded-lg text-sm font-medium text-slate-300 bg-slate-800/50 hover:bg-slate-700/50">
+                                Volver
+                            </button>
+                            <button onclick="app.saveDetail()" class="btn-primary text-sm">
+                                Guardar Cambios
+                            </button>
+                            <button onclick="app.deleteOpportunity()" class="px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700">
+                                Eliminar
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div data-view="channel-form" class="w-full h-full">
-            <div class="bg-white shadow rounded-lg h-full overflow-y-auto">
-                <div class="p-6">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6" id="channel-form-title">Nuevo Canal</h2>
-                    <form id="channel-form" class="space-y-6">
-                        <input type="hidden" id="channel-id">
-                        
-                        <div>
-                            <label for="channel-name" class="block text-sm font-medium text-gray-700">Nombre del Canal</label>
-                            <input type="text" id="channel-name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            <!-- Vista Canales -->
+            <div data-view="channels" class="w-full h-full">
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-3xl font-display font-bold text-white">Gestión de Canales</h2>
+                        <button onclick="app.showChannelForm()" class="btn-primary text-sm">
+                            + Nuevo Canal
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="p-6">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-slate-700">
+                                <thead class="bg-slate-800/50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Nombre</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Costes Origen</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Costes Destino</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="channels-table" class="bg-slate-800/30 divide-y divide-slate-700">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vista Localizaciones -->
+            <div data-view="localizaciones" class="w-full h-full">
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-3xl font-display font-bold text-white">Gestión de Localizaciones</h2>
+                        <button onclick="app.showLocalizacionForm()" class="btn-primary text-sm">
+                            + Nueva Localización
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="p-6">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-slate-700">
+                                <thead class="bg-slate-800/50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Nombre</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Descripción</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="localizaciones-table" class="bg-slate-800/30 divide-y divide-slate-700">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vista Stock -->
+            <div data-view="stock" class="w-full h-full">
+                <div class="card">
+                    <div class="p-6">
+                        <h2 class="text-3xl font-display font-bold text-white mb-6">Stock Disponible</h2>
+                        <div id="stock-cards" class="cards-responsive space-y-4 mb-4"></div>
+                        <div class="table-responsive overflow-x-auto">
+                            <table class="min-w-full divide-y divide-slate-700">
+                                <thead class="bg-slate-800/50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Producto</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Canal Compra</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Coste Unitario</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Unidades (Disponibles/Total)</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Valor Total Inmovilizado</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Fecha Compra</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Estado</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Localización</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stock-table" class="bg-slate-800/30 divide-y divide-slate-700">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vista Compras -->
+            <div data-view="compras" class="w-full h-full">
+                <div class="card">
+                    <div class="p-6">
+                        <h2 class="text-3xl font-display font-bold text-white mb-6">Compras</h2>
+                        <div id="compras-cards" class="cards-responsive space-y-4 mb-4"></div>
+                        <div class="table-responsive overflow-x-auto">
+                            <table class="min-w-full divide-y divide-slate-700">
+                                <thead class="bg-slate-800/50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Fecha</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Producto</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Canal Origen</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Unidades</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Precio Unitario</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Total Compra</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Desde Oportunidad</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="compras-table" class="bg-slate-800/30 divide-y divide-slate-700">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vista Ventas -->
+            <div data-view="ventas" class="w-full h-full">
+                <div class="card">
+                    <div class="p-6">
+                        <h2 class="text-3xl font-display font-bold text-white mb-6">Ventas</h2>
+                        <div id="ventas-cards" class="cards-responsive space-y-4 mb-4"></div>
+                        <div class="table-responsive overflow-x-auto">
+                            <table class="min-w-full divide-y divide-slate-700">
+                                <thead class="bg-slate-800/50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Fecha</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Producto</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Canal Destino</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Unidades</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Precio Unitario</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Total Venta</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Margen</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ventas-table" class="bg-slate-800/30 divide-y divide-slate-700">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vista Detalle Venta -->
+            <div data-view="venta-detail" class="w-full h-full">
+                <div class="card h-full overflow-y-auto">
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-6">
+                            <h2 class="text-3xl font-display font-bold text-white" id="venta-detail-product-name">-</h2>
+                            <button onclick="app.showView('ventas')" class="text-slate-400 hover:text-white">
+                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                            <div>
+                                <h3 class="text-sm font-medium text-slate-300 mb-2">Origen</h3>
+                                <p class="text-sm text-slate-300">Canal</p>
+                                <p class="text-lg font-semibold text-white" id="venta-detail-origin-channel">-</p>
+                                <p class="text-sm text-slate-300 mt-2">Fecha Compra</p>
+                                <p class="text-sm text-white" id="venta-detail-fecha-compra">-</p>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium text-slate-300 mb-2">Destino</h3>
+                                <p class="text-sm text-slate-300">Canal</p>
+                                <p class="text-lg font-semibold text-white" id="venta-detail-dest-channel">-</p>
+                                <p class="text-sm text-slate-300 mt-2">Fecha Venta</p>
+                                <p class="text-sm text-white" id="venta-detail-fecha-venta">-</p>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium text-slate-300 mb-2">Resumen</h3>
+                                <p class="text-sm text-slate-300">Unidades Vendidas</p>
+                                <p class="text-lg font-semibold text-white" id="venta-detail-unidades">0</p>
+                                <p class="text-sm text-slate-300 mt-2">Precio Compra Unitario</p>
+                                <p class="text-sm text-white" id="venta-detail-precio-compra">€0.00</p>
+                                <p class="text-sm text-slate-300 mt-2">Precio Venta Unitario</p>
+                                <p class="text-sm text-white" id="venta-detail-precio-venta">€0.00</p>
+                            </div>
+                        </div>
+
+                        <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <div class="flex justify-between items-center mb-2">
-                                    <label class="block text-sm font-medium text-gray-700">Costes de Origen</label>
-                                    <button type="button" onclick="app.addChannelCost('origin')" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">+ Añadir</button>
+                                    <h3 class="text-sm font-medium text-slate-300">Costes de Compra (asignados a esta venta)</h3>
+                                    <button type="button" onclick="app.addVentaCost('compra')" class="text-sm text-indigo-400 hover:text-indigo-300 font-medium">
+                                        + Añadir Coste
+                                    </button>
                                 </div>
-                                <div id="channel-origin-costs-list" class="space-y-3 border border-gray-200 rounded-lg p-4 bg-gray-50 min-h-[200px]">
+                                <div id="venta-compra-costs-list" class="space-y-3">
                                 </div>
                             </div>
                             <div>
                                 <div class="flex justify-between items-center mb-2">
-                                    <label class="block text-sm font-medium text-gray-700">Costes de Destino</label>
-                                    <button type="button" onclick="app.addChannelCost('destination')" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">+ Añadir</button>
+                                    <h3 class="text-sm font-medium text-slate-300">Costes de Venta</h3>
+                                    <button type="button" onclick="app.addVentaCost('venta')" class="text-sm text-indigo-400 hover:text-indigo-300 font-medium">
+                                        + Añadir Coste
+                                    </button>
                                 </div>
-                                <div id="channel-dest-costs-list" class="space-y-3 border border-gray-200 rounded-lg p-4 bg-gray-50 min-h-[200px]">
+                                <div id="venta-venta-costs-list" class="space-y-3">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-6 bg-slate-800/50 p-4 rounded-lg">
+                            <h3 class="text-sm font-medium text-slate-300 mb-3">Métricas de la Venta</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                <div>
+                                    <p class="text-slate-300">Coste Total Asignado a la Venta</p>
+                                    <p class="text-lg font-semibold text-white" id="venta-detail-total-compra">€0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-300">Ingresos Brutos</p>
+                                    <p class="text-lg font-semibold text-white" id="venta-detail-total-venta-bruta">€0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-300">Costes de Venta</p>
+                                    <p class="text-lg font-semibold text-white" id="venta-detail-total-costes-venta">€0.00</p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mt-4">
+                                <div>
+                                    <p class="text-slate-300">Coste de Compra Proporcional</p>
+                                    <p class="text-lg font-semibold text-white" id="venta-detail-total-costes-compra">€0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-300">Margen Neto</p>
+                                    <p class="text-lg font-semibold text-green-400" id="venta-detail-margin-neto">€0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-300">Rentabilidad</p>
+                                    <p class="text-lg font-semibold text-green-400" id="venta-detail-rentabilidad">0%</p>
                                 </div>
                             </div>
                         </div>
 
                         <div class="flex justify-end space-x-3">
-                            <button type="button" onclick="app.showView('channels')" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                                Cancelar
+                            <button onclick="app.showView('ventas')" class="px-4 py-2 border border-slate-600 rounded-lg text-sm font-medium text-slate-300 bg-slate-800/50 hover:bg-slate-700/50">
+                                Volver
                             </button>
-                            <button type="submit" class="btn-primary text-sm">
-                                Guardar
+                            <button onclick="app.saveVentaDetail()" class="btn-primary text-sm">
+                                Guardar Cambios
                             </button>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div data-view="localizacion-form" class="w-full h-full">
-            <div class="bg-white shadow rounded-lg h-full overflow-y-auto">
-                <div class="p-6">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6" id="localizacion-form-title">Nueva Localización</h2>
-                    <form id="localizacion-form" class="space-y-6">
-                        <input type="hidden" id="localizacion-id">
-                        
-                        <div>
-                            <label for="localizacion-name" class="block text-sm font-medium text-gray-700">Nombre de la Localización</label>
-                            <input type="text" id="localizacion-name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="Ej: Almacén A, Estantería 1">
-                        </div>
+            <!-- Vista Formulario Canal -->
+            <div data-view="channel-form" class="w-full h-full">
+                <div class="card h-full overflow-y-auto">
+                    <div class="p-6">
+                        <h2 class="text-3xl font-display font-bold text-white mb-6" id="channel-form-title">Nuevo Canal</h2>
+                        <form id="channel-form" class="space-y-6">
+                            <input type="hidden" id="channel-id">
+                            
+                            <div>
+                                <label for="channel-name" class="block text-sm font-medium text-slate-300">Nombre del Canal</label>
+                                <input type="text" id="channel-name" required class="input-field mt-1 w-full">
+                            </div>
 
-                        <div>
-                            <label for="localizacion-description" class="block text-sm font-medium text-gray-700">Descripción (opcional)</label>
-                            <textarea id="localizacion-description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="Descripción adicional de la localización"></textarea>
-                        </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <div class="flex justify-between items-center mb-2">
+                                        <label class="block text-sm font-medium text-slate-300">Costes de Origen</label>
+                                        <button type="button" onclick="app.addChannelCost('origin')" class="text-sm text-indigo-400 hover:text-indigo-300 font-medium">+ Añadir</button>
+                                    </div>
+                                    <div id="channel-origin-costs-list" class="space-y-3 border border-slate-600 rounded-lg p-4 bg-slate-800/30 min-h-[200px]">
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between items-center mb-2">
+                                        <label class="block text-sm font-medium text-slate-300">Costes de Destino</label>
+                                        <button type="button" onclick="app.addChannelCost('destination')" class="text-sm text-indigo-400 hover:text-indigo-300 font-medium">+ Añadir</button>
+                                    </div>
+                                    <div id="channel-dest-costs-list" class="space-y-3 border border-slate-600 rounded-lg p-4 bg-slate-800/30 min-h-[200px]">
+                                    </div>
+                                </div>
+                            </div>
 
-                        <div class="flex justify-end space-x-3">
-                            <button type="button" onclick="app.showView('localizaciones')" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                                Cancelar
-                            </button>
-                            <button type="button" onclick="app.saveLocalizacion()" class="btn-primary text-sm">
-                                Guardar
-                            </button>
-                        </div>
-                    </form>
+                            <div class="flex justify-end space-x-3">
+                                <button type="button" onclick="app.showView('channels')" class="px-4 py-2 border border-slate-600 rounded-lg text-sm font-medium text-slate-300 bg-slate-800/50 hover:bg-slate-700/50">
+                                    Cancelar
+                                </button>
+                                <button type="submit" class="btn-primary text-sm">
+                                    Guardar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
-    </main>
+
+            <!-- Vista Formulario Localización -->
+            <div data-view="localizacion-form" class="w-full h-full">
+                <div class="card h-full overflow-y-auto">
+                    <div class="p-6">
+                        <h2 class="text-3xl font-display font-bold text-white mb-6" id="localizacion-form-title">Nueva Localización</h2>
+                        <form id="localizacion-form" class="space-y-6">
+                            <input type="hidden" id="localizacion-id">
+                            
+                            <div>
+                                <label for="localizacion-name" class="block text-sm font-medium text-slate-300">Nombre de la Localización</label>
+                                <input type="text" id="localizacion-name" required class="input-field mt-1 w-full" placeholder="Ej: Almacén A, Estantería 1">
+                            </div>
+
+                            <div>
+                                <label for="localizacion-description" class="block text-sm font-medium text-slate-300">Descripción (opcional)</label>
+                                <textarea id="localizacion-description" rows="3" class="input-field mt-1 w-full" placeholder="Descripción adicional de la localización"></textarea>
+                            </div>
+
+                            <div class="flex justify-end space-x-3">
+                                <button type="button" onclick="app.showView('localizaciones')" class="px-4 py-2 border border-slate-600 rounded-lg text-sm font-medium text-slate-300 bg-slate-800/50 hover:bg-slate-700/50">
+                                    Cancelar
+                                </button>
+                                <button type="button" onclick="app.saveLocalizacion()" class="btn-primary text-sm">
+                                    Guardar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
 
     <!-- Configuration (must be loaded first) -->
     <script src="config.js"></script>
 
     <!-- Compra Modal -->
-    <div id="compra-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center" onclick="app.closeCompraModalOnOverlay(event)">
+    <div id="compra-modal" class="fixed inset-0 modal-overlay z-50 hidden flex items-center justify-center" onclick="app.closeCompraModalOnOverlay(event)">
         <div class="card max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-display font-bold text-gray-900">Registrar Compra</h2>
-                    <button onclick="app.closeCompraModal()" class="text-gray-400 hover:text-gray-600">
+                    <h2 class="text-2xl font-display font-bold text-white">Registrar Compra</h2>
+                    <button onclick="app.closeCompraModal()" class="text-slate-400 hover:text-white">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
@@ -1364,29 +1299,28 @@
                     <input type="hidden" id="compra-canal-origen-id">
                     <input type="hidden" id="compra-product-name">
                     <div>
-                        <label for="compra-product-name-display" class="block text-sm font-medium text-gray-700 mb-1">Producto</label>
-                        <input type="text" id="compra-product-name-display" readonly class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 sm:text-sm">
+                        <label for="compra-product-name-display" class="block text-sm font-medium text-slate-300 mb-1">Producto</label>
+                        <input type="text" id="compra-product-name-display" readonly class="input-field w-full bg-slate-800/50">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Unidades por Talla</label>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Unidades por Talla</label>
                         <div id="compra-items-container" class="space-y-3">
-                            <!-- Las filas se añadirán dinámicamente aquí -->
                         </div>
-                        <button type="button" onclick="app.addCompraRow()" class="mt-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+                        <button type="button" onclick="app.addCompraRow()" class="mt-2 text-sm text-indigo-400 hover:text-indigo-300 font-medium">
                             + Añadir fila
                         </button>
                     </div>
                     <div>
-                        <label for="compra-precio-base" class="block text-sm font-medium text-gray-700 mb-1">Precio Base Unitario (€)</label>
-                        <input type="number" id="compra-precio-base" step="0.01" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        <p class="mt-1 text-xs text-gray-500">Se usará como precio por defecto si no se especifica en cada fila</p>
+                        <label for="compra-precio-base" class="block text-sm font-medium text-slate-300 mb-1">Precio Base Unitario (€)</label>
+                        <input type="number" id="compra-precio-base" step="0.01" min="0" class="input-field w-full">
+                        <p class="mt-1 text-xs text-slate-400">Se usará como precio por defecto si no se especifica en cada fila</p>
                     </div>
                     <div>
-                        <label for="compra-fecha" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Compra</label>
-                        <input type="date" id="compra-fecha" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <label for="compra-fecha" class="block text-sm font-medium text-slate-300 mb-1">Fecha de Compra</label>
+                        <input type="date" id="compra-fecha" required class="input-field w-full">
                     </div>
                     <div class="flex justify-end space-x-3 pt-4">
-                        <button type="button" onclick="app.closeCompraModal()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        <button type="button" onclick="app.closeCompraModal()" class="px-4 py-2 border border-slate-600 rounded-lg text-sm font-medium text-slate-300 bg-slate-800/50 hover:bg-slate-700/50">
                             Cancelar
                         </button>
                         <button type="submit" class="btn-primary text-sm">
@@ -1399,12 +1333,12 @@
     </div>
 
     <!-- Recepcionar Stock Modal -->
-    <div id="recepcionar-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center" onclick="app.closeRecepcionarModalOnOverlay(event)">
+    <div id="recepcionar-modal" class="fixed inset-0 modal-overlay z-50 hidden flex items-center justify-center" onclick="app.closeRecepcionarModalOnOverlay(event)">
         <div class="card max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-display font-bold text-gray-900">Recepcionar Stock</h2>
-                    <button onclick="app.closeRecepcionarModal()" class="text-gray-400 hover:text-gray-600">
+                    <h2 class="text-2xl font-display font-bold text-white">Recepcionar Stock</h2>
+                    <button onclick="app.closeRecepcionarModal()" class="text-slate-400 hover:text-white">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
@@ -1413,14 +1347,14 @@
                 <form id="recepcionar-form" class="space-y-4">
                     <input type="hidden" id="recepcionar-stock-id">
                     <div>
-                        <label for="recepcionar-localizacion" class="block text-sm font-medium text-gray-700 mb-1">Localización (opcional)</label>
-                        <select id="recepcionar-localizacion" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <label for="recepcionar-localizacion" class="block text-sm font-medium text-slate-300 mb-1">Localización (opcional)</label>
+                        <select id="recepcionar-localizacion" class="input-field w-full">
                             <option value="">Sin localización</option>
                         </select>
-                        <p class="mt-1 text-xs text-gray-500">Selecciona dónde se recepciona el stock</p>
+                        <p class="mt-1 text-xs text-slate-400">Selecciona dónde se recepciona el stock</p>
                     </div>
                     <div class="flex justify-end space-x-3 pt-4">
-                        <button type="button" onclick="app.closeRecepcionarModal()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        <button type="button" onclick="app.closeRecepcionarModal()" class="px-4 py-2 border border-slate-600 rounded-lg text-sm font-medium text-slate-300 bg-slate-800/50 hover:bg-slate-700/50">
                             Cancelar
                         </button>
                         <button type="submit" class="btn-primary text-sm">
@@ -1433,12 +1367,12 @@
     </div>
 
     <!-- Venta Modal -->
-    <div id="venta-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center" onclick="app.closeVentaModalOnOverlay(event)">
+    <div id="venta-modal" class="fixed inset-0 modal-overlay z-50 hidden flex items-center justify-center" onclick="app.closeVentaModalOnOverlay(event)">
         <div class="card max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-display font-bold text-gray-900">Registrar Venta</h2>
-                    <button onclick="app.closeVentaModal()" class="text-gray-400 hover:text-gray-600">
+                    <h2 class="text-2xl font-display font-bold text-white">Registrar Venta</h2>
+                    <button onclick="app.closeVentaModal()" class="text-slate-400 hover:text-white">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
@@ -1447,26 +1381,26 @@
                 <form id="venta-form" class="space-y-4">
                     <input type="hidden" id="venta-stock-id">
                     <div>
-                        <label for="venta-canal-destino" class="block text-sm font-medium text-gray-700 mb-1">Canal de Venta</label>
-                        <select id="venta-canal-destino" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <label for="venta-canal-destino" class="block text-sm font-medium text-slate-300 mb-1">Canal de Venta</label>
+                        <select id="venta-canal-destino" required class="input-field w-full">
                             <option value="">Selecciona un canal</option>
                         </select>
                     </div>
                     <div>
-                        <label for="venta-precio-unitario" class="block text-sm font-medium text-gray-700 mb-1">Precio Unitario de Venta (€)</label>
-                        <input type="number" id="venta-precio-unitario" step="0.01" min="0" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <label for="venta-precio-unitario" class="block text-sm font-medium text-slate-300 mb-1">Precio Unitario de Venta (€)</label>
+                        <input type="number" id="venta-precio-unitario" step="0.01" min="0" required class="input-field w-full">
                     </div>
                     <div>
-                        <label for="venta-unidades" class="block text-sm font-medium text-gray-700 mb-1">Unidades Vendidas</label>
-                        <input type="number" id="venta-unidades" min="1" required value="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        <p class="mt-1 text-xs text-gray-500" id="venta-unidades-disponibles">Disponibles: <span id="venta-unidades-max">0</span></p>
+                        <label for="venta-unidades" class="block text-sm font-medium text-slate-300 mb-1">Unidades Vendidas</label>
+                        <input type="number" id="venta-unidades" min="1" required value="1" class="input-field w-full">
+                        <p class="mt-1 text-xs text-slate-400" id="venta-unidades-disponibles">Disponibles: <span id="venta-unidades-max">0</span></p>
                     </div>
                     <div>
-                        <label for="venta-fecha" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Venta</label>
-                        <input type="date" id="venta-fecha" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <label for="venta-fecha" class="block text-sm font-medium text-slate-300 mb-1">Fecha de Venta</label>
+                        <input type="date" id="venta-fecha" required class="input-field w-full">
                     </div>
                     <div class="flex justify-end space-x-3 pt-4">
-                        <button type="button" onclick="app.closeVentaModal()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        <button type="button" onclick="app.closeVentaModal()" class="px-4 py-2 border border-slate-600 rounded-lg text-sm font-medium text-slate-300 bg-slate-800/50 hover:bg-slate-700/50">
                             Cancelar
                         </button>
                         <button type="submit" class="btn-primary text-sm">
@@ -1490,10 +1424,9 @@
             console.error('Configuration file (config.js) is missing or incomplete.');
             const errorMsg = 'Error: Configuration file is missing. Please create config.js from config.example.js in the frontend directory.';
             alert(errorMsg);
-            document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif;"><h1 style="color: red;">Configuration Error</h1><p>' + errorMsg + '</p></div>';
+            document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif; color: white;"><h1 style="color: red;">Configuration Error</h1><p>' + errorMsg + '</p></div>';
         }
         
-        // Validar también configuración de Supabase
         if (!window.APP_CONFIG || !window.APP_CONFIG.SUPABASE_URL || !window.APP_CONFIG.SUPABASE_ANON_KEY) {
             console.warn('Configuración de Supabase no encontrada. La autenticación puede no funcionar correctamente.');
         }
