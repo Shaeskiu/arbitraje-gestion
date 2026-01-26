@@ -711,6 +711,8 @@ const stockStorage = {
             canalOrigenName: canal.name || 'N/A',
             canalOrigenId: compra.canal_origen_id || null,
             fechaCompra: compra.fecha_compra || null,
+            fecha_recepcion: dbStock.fecha_recepcion || null,
+            fecha_disponible: dbStock.fecha_disponible || null,
             createdAt: dbStock.created_at,
             updatedAt: dbStock.updated_at
         };

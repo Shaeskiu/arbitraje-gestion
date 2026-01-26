@@ -1772,30 +1772,30 @@ const app = {
         
         const rowIndex = itemsContainer.children.length;
         const row = document.createElement('div');
-        row.className = 'flex gap-2 items-end border border-gray-200 rounded-md p-3 bg-gray-50';
+        row.className = 'flex gap-2 items-end border border-slate-600 rounded-md p-3 bg-slate-800/50';
         row.setAttribute('data-row-index', rowIndex);
         
         row.innerHTML = `
             <div class="flex-1">
-                <label class="block text-xs font-medium text-gray-700 mb-1">Talla (opcional)</label>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Talla (opcional)</label>
                 <input type="text" 
-                       class="compra-item-talla block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                       class="compra-item-talla input-field w-full" 
                        placeholder="42, S, M, L..."
                        data-row="${rowIndex}">
             </div>
             <div class="flex-1">
-                <label class="block text-xs font-medium text-gray-700 mb-1">Unidades *</label>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Unidades *</label>
                 <input type="number" 
-                       class="compra-item-unidades block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                       class="compra-item-unidades input-field w-full" 
                        min="1" 
                        value="1" 
                        required
                        data-row="${rowIndex}">
             </div>
             <div class="flex-1">
-                <label class="block text-xs font-medium text-gray-700 mb-1">Precio Unit. (€)</label>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Precio Unit. (€)</label>
                 <input type="number" 
-                       class="compra-item-precio block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                       class="compra-item-precio input-field w-full" 
                        step="0.01" 
                        min="0" 
                        value="${precioBase}"
@@ -1805,8 +1805,8 @@ const app = {
             <div class="flex-shrink-0">
                 <button type="button" 
                         onclick="app.removeCompraRow(${rowIndex})" 
-                        class="text-red-600 hover:text-red-800 p-2"
-                        ${rowIndex === 0 ? 'disabled class="text-gray-400 cursor-not-allowed"' : ''}
+                        class="text-red-400 hover:text-red-300 p-2"
+                        ${rowIndex === 0 ? 'disabled class="text-slate-500 cursor-not-allowed"' : ''}
                         title="${rowIndex === 0 ? 'No se puede eliminar la primera fila' : 'Eliminar fila'}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>

@@ -889,7 +889,7 @@ const ui = {
         if (cardsContainer) cardsContainer.innerHTML = '';
         
         if (!stockItems || stockItems.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-4 text-center text-slate-400">No hay stock disponible</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="px-6 py-4 text-center text-slate-400">No hay stock disponible</td></tr>';
             if (cardsContainer) cardsContainer.innerHTML = '<div class="text-center text-slate-400 py-8">No hay stock disponible</div>';
             return;
         }
@@ -900,6 +900,8 @@ const ui = {
             
             const valorTotal = stock.unidadesDisponibles * stock.costeUnitarioReal;
             const formattedDate = stock.fechaCompra ? new Date(stock.fechaCompra).toLocaleDateString('es-ES') : 'N/A';
+            const formattedFechaRecepcion = stock.fecha_recepcion ? new Date(stock.fecha_recepcion).toLocaleDateString('es-ES') : '-';
+            const formattedFechaDisponible = stock.fecha_disponible ? new Date(stock.fecha_disponible).toLocaleDateString('es-ES') : '-';
             
             // Mapear estados a badges de color
             const estadoLabels = {
@@ -970,6 +972,12 @@ const ui = {
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm text-slate-300">${formattedDate}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-slate-300">${formattedFechaRecepcion}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-slate-300">${formattedFechaDisponible}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${estadoClass}">
@@ -1043,6 +1051,14 @@ const ui = {
                         <div class="flex justify-between text-sm">
                             <span class="text-slate-300">Fecha Compra</span>
                             <span class="font-medium text-white">${formattedDate}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-300">Fecha Recepción</span>
+                            <span class="font-medium text-white">${formattedFechaRecepcion}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-300">Fecha puesta venta</span>
+                            <span class="font-medium text-white">${formattedFechaDisponible}</span>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-slate-300">Localización</span>

@@ -1591,7 +1591,10 @@ app.post('/stock/:id/recepcionar', async (req, res) => {
     }
 
     // Preparar actualización
-    const updateData = { estado: 'recepcionado' };
+    const updateData = { 
+      estado: 'recepcionado',
+      fecha_recepcion: new Date().toISOString().split('T')[0] // Fecha actual en formato YYYY-MM-DD
+    };
     if (localizacion_id !== undefined) {
       updateData.localizacion_id = localizacion_id || null;
     }
@@ -1644,7 +1647,10 @@ app.post('/stock/:id/poner-a-venta', async (req, res) => {
 
     const { data: updatedStock, error: updateError } = await supabase
       .from('stock')
-      .update({ estado: 'disponible' })
+      .update({ 
+        estado: 'disponible',
+        fecha_disponible: new Date().toISOString().split('T')[0] // Fecha actual en formato YYYY-MM-DD
+      })
       .eq('id', id)
       .select()
       .single();
