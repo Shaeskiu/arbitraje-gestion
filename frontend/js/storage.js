@@ -713,9 +713,56 @@ const stockStorage = {
             fechaCompra: compra.fecha_compra || null,
             fecha_recepcion: dbStock.fecha_recepcion || null,
             fecha_disponible: dbStock.fecha_disponible || null,
+            precioActual: dbStock.precio_actual !== undefined && dbStock.precio_actual !== null ? parseFloat(dbStock.precio_actual) : null,
+            margenNeto: dbStock.margen_neto !== undefined && dbStock.margen_neto !== null ? parseFloat(dbStock.margen_neto) : null,
+            margenPorcentual: dbStock.margen_porcentual !== undefined && dbStock.margen_porcentual !== null ? parseFloat(dbStock.margen_porcentual) : null,
+            opportunityCostsPerUnit: dbStock.opportunity_costs_per_unit !== undefined ? parseFloat(dbStock.opportunity_costs_per_unit) : 0,
+            opportunityCosts: compra.opportunity_costs || [],
+            compraUnidades: compra.unidades || 1,
+            compraPrecioUnitario: compra.precio_unitario || 0,
             createdAt: dbStock.created_at,
             updatedAt: dbStock.updated_at
         };
+    },
+    
+    async setPrecioStock(stockId, precio, motivo = null) {
+        try {
+            const body = { precio: parseFloat(precio) };
+            if (motivo) body.motivo = motivo;
+            
+            const response = await fetch(`${this.apiBaseUrl}/stock/${stockId}/precios`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=utf-8'
+                },
+                body: JSON.stringify(body)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Error setting precio stock:', error);
+            throw error;
+        }
+    },
+    
+    async getHistorialPrecios(stockId) {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/stock/${stockId}/precios`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching historial precios:', error);
+            return [];
+        }
     }
 };
 
@@ -845,6 +892,168 @@ const ventasStorage = {
             return await response.json();
         } catch (error) {
             console.error('Error updating venta:', error);
+            throw error;
+        }
+    }
+};
+
+const kanbanStorage = {
+    get apiBaseUrl() {
+        if (!window.APP_CONFIG || !window.APP_CONFIG.API_BASE_URL) {
+            console.error('APP_CONFIG.API_BASE_URL is not defined. Make sure config.js is loaded.');
+            throw new Error('API configuration is missing. Please ensure config.js is loaded.');
+        }
+        return window.APP_CONFIG.API_BASE_URL;
+    },
+    
+    transformTaskFromDB(dbTask) {
+        return {
+            id: dbTask.id,
+            title: dbTask.title,
+            description: dbTask.description || '',
+            status: dbTask.status || 'nueva_idea',
+            assigneeEmail: dbTask.assignee_email || null,
+            createdByEmail: dbTask.created_by_email || null,
+            createdAt: dbTask.created_at,
+            updatedAt: dbTask.updated_at
+        };
+    },
+    
+    transformCommentFromDB(dbComment) {
+        return {
+            id: dbComment.id,
+            taskId: dbComment.task_id,
+            authorEmail: dbComment.author_email,
+            content: dbComment.content,
+            createdAt: dbComment.created_at
+        };
+    },
+    
+    async getAllTasks() {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/kanban/tasks`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const tasks = await response.json();
+            return Array.isArray(tasks) ? tasks.map(t => this.transformTaskFromDB(t)) : [];
+        } catch (error) {
+            console.error('Error fetching kanban tasks:', error);
+            return [];
+        }
+    },
+    
+    async createTask(task) {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/kanban/tasks`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=utf-8'
+                },
+                body: JSON.stringify({
+                    title: task.title,
+                    description: task.description || null,
+                    status: task.status || 'nueva_idea',
+                    assignee_email: task.assigneeEmail || null,
+                    created_by_email: task.createdByEmail
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+            }
+            
+            const created = await response.json();
+            return this.transformTaskFromDB(created);
+        } catch (error) {
+            console.error('Error creating kanban task:', error);
+            throw error;
+        }
+    },
+    
+    async updateTask(id, updates) {
+        try {
+            const payload = {};
+            if (updates.title !== undefined) payload.title = updates.title;
+            if (updates.description !== undefined) payload.description = updates.description;
+            if (updates.status !== undefined) payload.status = updates.status;
+            if (updates.assigneeEmail !== undefined) payload.assignee_email = updates.assigneeEmail;
+            
+            const response = await fetch(`${this.apiBaseUrl}/kanban/tasks/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json; charset=utf-8'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+            }
+            
+            const updated = await response.json();
+            return this.transformTaskFromDB(updated);
+        } catch (error) {
+            console.error('Error updating kanban task:', error);
+            throw error;
+        }
+    },
+    
+    async deleteTask(id) {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/kanban/tasks/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Error deleting kanban task:', error);
+            return false;
+        }
+    },
+    
+    async getComments(taskId) {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/kanban/tasks/${taskId}/comments`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const comments = await response.json();
+            return Array.isArray(comments) ? comments.map(c => this.transformCommentFromDB(c)) : [];
+        } catch (error) {
+            console.error('Error fetching kanban comments:', error);
+            return [];
+        }
+    },
+    
+    async addComment(taskId, content, authorEmail) {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/kanban/tasks/${taskId}/comments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=utf-8'
+                },
+                body: JSON.stringify({
+                    content,
+                    author_email: authorEmail
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+            }
+            
+            const created = await response.json();
+            return this.transformCommentFromDB(created);
+        } catch (error) {
+            console.error('Error creating kanban comment:', error);
             throw error;
         }
     }

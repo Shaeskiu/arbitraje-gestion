@@ -1371,7 +1371,7 @@ app.get('/stock', async (req, res) => {
       
       const [comprasData, localizacionesData] = await Promise.all([
         compraIds.length > 0 
-          ? supabase.from('compras').select('id, oportunidad_id, canal_origen_id, product_name, fecha_compra').in('id', compraIds)
+          ? supabase.from('compras').select('id, oportunidad_id, canal_origen_id, product_name, fecha_compra, precio_unitario, unidades').in('id', compraIds)
           : { data: [] },
         localizacionIds.length > 0
           ? supabase.from('localizaciones').select('id, name, description').in('id', localizacionIds)
@@ -1382,10 +1382,16 @@ app.get('/stock', async (req, res) => {
       const localizaciones = localizacionesData.data || [];
 
       const channelIds = [...new Set(compras.map(c => c.canal_origen_id).filter(Boolean))];
+      const oportunidadIds = [...new Set(compras.map(c => c.oportunidad_id).filter(Boolean))];
 
-      const channelsData = channelIds.length > 0 
-        ? await supabase.from('channels').select('id, name').in('id', channelIds)
-        : { data: [] };
+      const [channelsData, opportunityCostsData] = await Promise.all([
+        channelIds.length > 0 
+          ? supabase.from('channels').select('id, name').in('id', channelIds)
+          : { data: [] },
+        oportunidadIds.length > 0
+          ? supabase.from('opportunity_costs').select('id, opportunity_id, name, type, value, base, source').in('opportunity_id', oportunidadIds)
+          : { data: [] }
+      ]);
 
       const comprasMap = {};
       compras.forEach(c => { comprasMap[c.id] = c; });
@@ -1398,11 +1404,96 @@ app.get('/stock', async (req, res) => {
       const localizacionesMap = {};
       localizaciones.forEach(loc => { localizacionesMap[loc.id] = loc; });
 
+      // Mapa de costes por oportunidad
+      const costsByOpportunity = {};
+      if (opportunityCostsData.data) {
+        opportunityCostsData.data.forEach(cost => {
+          if (!costsByOpportunity[cost.opportunity_id]) {
+            costsByOpportunity[cost.opportunity_id] = [];
+          }
+          costsByOpportunity[cost.opportunity_id].push(cost);
+        });
+      }
+
+      // Obtener precios actuales para todos los stocks
+      const stockIds = stockItems.map(s => s.id);
+      let preciosMap = {};
+      if (stockIds.length > 0) {
+        try {
+          const { data: preciosData, error: preciosError } = await supabase
+            .from('stock_price_history')
+            .select('stock_id, precio')
+            .in('stock_id', stockIds)
+            .is('fecha_hasta', null);
+          
+          if (!preciosError && preciosData) {
+            preciosData.forEach(row => {
+              preciosMap[row.stock_id] = parseFloat(row.precio);
+            });
+          }
+        } catch (precioError) {
+          console.warn('Error obteniendo precios actuales:', precioError);
+          // Continuar sin precios si hay error
+        }
+      }
+
+      // Función helper para calcular costes totales de oportunidad por unidad
+      const calculateOpportunityCostsPerUnit = (compra, precioVenta) => {
+        if (!compra || !compra.oportunidad_id || !costsByOpportunity[compra.oportunidad_id]) {
+          return 0;
+        }
+        
+        const costs = costsByOpportunity[compra.oportunidad_id];
+        let totalCosts = 0;
+        
+        costs.forEach(cost => {
+          if (cost.type === 'fixed') {
+            // Coste fijo se divide entre las unidades de la compra
+            totalCosts += (parseFloat(cost.value) || 0) / (compra.unidades || 1);
+          } else if (cost.type === 'percentage') {
+            // Coste porcentual sobre precio de compra o venta
+            if (cost.base === 'sale' && precioVenta !== null) {
+              // Solo calcular si hay precio de venta cuando el coste es sobre venta
+              const costValue = (precioVenta * parseFloat(cost.value || 0)) / 100;
+              totalCosts += costValue;
+            } else if (cost.base === 'purchase') {
+              // Coste sobre precio de compra siempre se puede calcular
+              const costValue = (compra.precio_unitario * parseFloat(cost.value || 0)) / 100;
+              totalCosts += costValue;
+            }
+          }
+        });
+        
+        return totalCosts;
+      };
+
       const enriched = stockItems.map(stock => {
         const compra = comprasMap[stock.compra_id];
         const localizacion = stock.localizacion_id ? localizacionesMap[stock.localizacion_id] : null;
+        const precioActual = preciosMap[stock.id] || null;
+        
+        // Calcular costes de oportunidad por unidad
+        const opportunityCostsPerUnit = compra ? calculateOpportunityCostsPerUnit(compra, precioActual) : 0;
+        
+        // Calcular coste total por unidad
+        const costeTotalPorUnidad = stock.coste_unitario_real + opportunityCostsPerUnit;
+        
+        // Calcular margen neto: precio_actual - coste_unitario_real - costes_oportunidad_por_unidad
+        const margenNeto = precioActual !== null 
+          ? precioActual - costeTotalPorUnidad
+          : null;
+        
+        // Calcular porcentaje de margen: (margen_neto / coste_total) * 100
+        const margenPorcentual = (margenNeto !== null && costeTotalPorUnidad > 0)
+          ? (margenNeto / costeTotalPorUnidad) * 100
+          : null;
+        
         return {
           ...stock,
+          precio_actual: precioActual,
+          margen_neto: margenNeto !== null ? parseFloat(margenNeto.toFixed(2)) : null,
+          margen_porcentual: margenPorcentual !== null ? parseFloat(margenPorcentual.toFixed(2)) : null,
+          opportunity_costs_per_unit: opportunityCostsPerUnit > 0 ? parseFloat(opportunityCostsPerUnit.toFixed(2)) : 0,
           product_name: compra?.product_name || stock.product_name || null,
           localizacion: localizacion ? {
             id: localizacion.id,
@@ -1411,7 +1502,10 @@ app.get('/stock', async (req, res) => {
           } : null,
           compra: compra ? {
             ...compra,
-            canal_origen: channelsMap[compra.canal_origen_id] ? { id: compra.canal_origen_id, name: channelsMap[compra.canal_origen_id] } : null
+            canal_origen: channelsMap[compra.canal_origen_id] ? { id: compra.canal_origen_id, name: channelsMap[compra.canal_origen_id] } : null,
+            opportunity_costs: compra.oportunidad_id && costsByOpportunity[compra.oportunidad_id] 
+              ? costsByOpportunity[compra.oportunidad_id] 
+              : []
           } : null
         };
       });
@@ -1663,6 +1757,166 @@ app.post('/stock/:id/poner-a-venta', async (req, res) => {
     res.json(updatedStock);
   } catch (error) {
     console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// ============================================
+// ENDPOINTS DE HISTÓRICO DE PRECIOS DE STOCK
+// ============================================
+
+// Obtener histórico completo de precios de un stock
+app.get('/stock/:id/precios', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid stock ID' });
+    }
+
+    const { data, error } = await supabase
+      .from('stock_price_history')
+      .select('*')
+      .eq('stock_id', id)
+      .order('fecha_desde', { ascending: false });
+
+    if (error) {
+      console.error('Supabase error (stock_price_history get):', error);
+      return res.status(500).json({ error: 'Database error', details: error.message });
+    }
+
+    res.json(data || []);
+  } catch (error) {
+    console.error('Unexpected error (stock_price_history get):', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Crear o actualizar precio de un stock
+app.post('/stock/:id/precios', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { precio, motivo, usuario_email } = req.body || {};
+
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid stock ID' });
+    }
+
+    if (precio === undefined || precio === null || typeof precio !== 'number' || precio < 0) {
+      return res.status(400).json({ error: 'Valid precio is required (>= 0)' });
+    }
+
+    // Verificar que el stock existe
+    const { data: stockItem, error: stockError } = await supabase
+      .from('stock')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (stockError || !stockItem) {
+      return res.status(404).json({ error: 'Stock item not found' });
+    }
+
+    // Obtener precio actual vigente (si existe)
+    const { data: precioVigenteData, error: precioVigenteError } = await supabase
+      .from('stock_price_history')
+      .select('precio, fecha_desde')
+      .eq('stock_id', id)
+      .is('fecha_hasta', null)
+      .order('fecha_desde', { ascending: false })
+      .limit(1);
+
+    // Si no hay error y hay datos, usar el primero (puede no haber ninguno)
+    const precioVigente = precioVigenteData && precioVigenteData.length > 0 ? precioVigenteData[0] : null;
+    const precioAnterior = precioVigente ? parseFloat(precioVigente.precio) : null;
+
+    // Cerrar precio vigente anterior si existe
+    if (precioVigente) {
+      const { error: updateError } = await supabase
+        .from('stock_price_history')
+        .update({ fecha_hasta: new Date().toISOString() })
+        .eq('stock_id', id)
+        .is('fecha_hasta', null);
+      
+      if (updateError) {
+        console.warn('Error cerrando precio anterior:', updateError);
+      }
+    }
+
+    // Determinar tipo de evento
+    let tipoEvento = 'publicacion';
+    if (precioAnterior !== null) {
+      if (precio < precioAnterior) {
+        tipoEvento = 'bajada';
+      } else if (precio > precioAnterior) {
+        tipoEvento = 'subida';
+      } else {
+        tipoEvento = 'ajuste';
+      }
+    }
+
+    // Insertar nuevo registro de precio usando rpc o insert directo
+    const insertData = {
+      stock_id: id,
+      precio: parseFloat(precio),
+      tipo_evento: tipoEvento,
+      motivo: motivo && motivo.trim() ? motivo.trim() : null,
+      usuario_email: usuario_email && usuario_email.trim() ? usuario_email.trim() : null,
+      fecha_hasta: null
+    };
+
+    // Intentar insert con Supabase client
+    let newPrecioData = null;
+    let insertError = null;
+    
+    try {
+      const result = await supabase
+        .from('stock_price_history')
+        .insert(insertData)
+        .select();
+      
+      newPrecioData = result.data;
+      insertError = result.error;
+      
+      // Si hay error, intentar con rpc o verificar el error
+      if (insertError) {
+        console.error('Supabase error (stock_price_history insert):', JSON.stringify(insertError, null, 2));
+        console.error('Error type:', typeof insertError);
+        console.error('Error keys:', Object.keys(insertError || {}));
+        console.error('Insert data:', JSON.stringify(insertData, null, 2));
+        
+        // Si el error está vacío, puede ser un problema de PostgREST
+        // Intentar verificar si la tabla está expuesta
+        const checkResult = await supabase
+          .from('stock_price_history')
+          .select('id')
+          .limit(1);
+        
+        console.error('Check table access result:', checkResult.error ? JSON.stringify(checkResult.error) : 'OK');
+        
+        return res.status(500).json({ 
+          error: 'Database error', 
+          details: insertError.message || insertError.details || insertError.hint || 'Unknown error from PostgREST',
+          code: insertError.code,
+          rawError: JSON.stringify(insertError)
+        });
+      }
+    } catch (err) {
+      console.error('Exception during insert:', err);
+      return res.status(500).json({ 
+        error: 'Database error', 
+        details: err.message || 'Exception during database insert'
+      });
+    }
+
+    if (!newPrecioData || newPrecioData.length === 0) {
+      console.error('No data returned from insert');
+      return res.status(500).json({ error: 'Database error', details: 'No data returned from insert' });
+    }
+
+    res.status(201).json(newPrecioData[0]);
+  } catch (error) {
+    console.error('Unexpected error (stock_price_history create):', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
@@ -2324,6 +2578,239 @@ app.get('/dashboard/margins', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// ============================================
+// KANBAN ENDPOINTS (TAREAS SEMANALES)
+// ============================================
+
+// Obtener todas las tareas de kanban
+app.get('/kanban/tasks', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('kanban_tasks')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Supabase error (kanban_tasks getAll):', error);
+      return res.status(500).json({ error: 'Database error', details: error.message });
+    }
+
+    res.json(data || []);
+  } catch (error) {
+    console.error('Unexpected error (kanban_tasks getAll):', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Crear nueva tarea
+app.post('/kanban/tasks', async (req, res) => {
+  try {
+    const { title, description, status, assignee_email, created_by_email } = req.body || {};
+
+    if (!title || typeof title !== 'string' || title.trim().length === 0) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+
+    const allowedStatuses = ['nueva_idea', 'esta_semana', 'solucionado'];
+    const finalStatus = status && typeof status === 'string'
+      ? status.trim()
+      : 'nueva_idea';
+
+    if (!allowedStatuses.includes(finalStatus)) {
+      return res.status(400).json({ error: `Invalid status. Must be one of: ${allowedStatuses.join(', ')}` });
+    }
+
+    if (!created_by_email || typeof created_by_email !== 'string' || created_by_email.trim().length === 0) {
+      return res.status(400).json({ error: 'created_by_email is required' });
+    }
+
+    const { data, error } = await supabase
+      .from('kanban_tasks')
+      .insert({
+        title: title.trim(),
+        description: description && typeof description === 'string' ? description.trim() : null,
+        status: finalStatus,
+        assignee_email: assignee_email && typeof assignee_email === 'string' ? assignee_email.trim() : null,
+        created_by_email: created_by_email.trim()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (kanban_tasks create):', error);
+      return res.status(500).json({ error: 'Database error', details: error.message });
+    }
+
+    res.status(201).json(data);
+  } catch (error) {
+    console.error('Unexpected error (kanban_tasks create):', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Actualizar tarea
+app.put('/kanban/tasks/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid task ID' });
+    }
+
+    const updates = req.body || {};
+    const updateData = {};
+
+    if (updates.title !== undefined) {
+      if (!updates.title || typeof updates.title !== 'string' || updates.title.trim().length === 0) {
+        return res.status(400).json({ error: 'Title is required' });
+      }
+      updateData.title = updates.title.trim();
+    }
+
+    if (updates.description !== undefined) {
+      updateData.description = updates.description && typeof updates.description === 'string'
+        ? updates.description.trim()
+        : null;
+    }
+
+    if (updates.status !== undefined) {
+      const allowedStatuses = ['nueva_idea', 'esta_semana', 'solucionado'];
+      const finalStatus = String(updates.status).trim();
+      if (!allowedStatuses.includes(finalStatus)) {
+        return res.status(400).json({ error: `Invalid status. Must be one of: ${allowedStatuses.join(', ')}` });
+      }
+      updateData.status = finalStatus;
+    }
+
+    if (updates.assignee_email !== undefined) {
+      updateData.assignee_email = updates.assignee_email && typeof updates.assignee_email === 'string'
+        ? updates.assignee_email.trim()
+        : null;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    updateData.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('kanban_tasks')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (kanban_tasks update):', error);
+      return res.status(500).json({ error: 'Database error', details: error.message });
+    }
+
+    if (!data) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Unexpected error (kanban_tasks update):', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Borrar tarea
+app.delete('/kanban/tasks/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid task ID' });
+    }
+
+    const { error } = await supabase
+      .from('kanban_tasks')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Supabase error (kanban_tasks delete):', error);
+      return res.status(500).json({ error: 'Database error', details: error.message });
+    }
+
+    res.status(204).send();
+  } catch (error) {
+    console.error('Unexpected error (kanban_tasks delete):', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Obtener comentarios de una tarea
+app.get('/kanban/tasks/:id/comments', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid task ID' });
+    }
+
+    const { data, error } = await supabase
+      .from('kanban_comments')
+      .select('*')
+      .eq('task_id', id)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Supabase error (kanban_comments get):', error);
+      return res.status(500).json({ error: 'Database error', details: error.message });
+    }
+
+    res.json(data || []);
+  } catch (error) {
+    console.error('Unexpected error (kanban_comments get):', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Crear comentario en una tarea
+app.post('/kanban/tasks/:id/comments', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || typeof id !== 'string' || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid task ID' });
+    }
+
+    const { content, author_email } = req.body || {};
+
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+      return res.status(400).json({ error: 'Content is required' });
+    }
+
+    if (!author_email || typeof author_email !== 'string' || author_email.trim().length === 0) {
+      return res.status(400).json({ error: 'author_email is required' });
+    }
+
+    const { data, error } = await supabase
+      .from('kanban_comments')
+      .insert({
+        task_id: id,
+        content: content.trim(),
+        author_email: author_email.trim()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (kanban_comments create):', error);
+      return res.status(500).json({ error: 'Database error', details: error.message });
+    }
+
+    res.status(201).json(data);
+  } catch (error) {
+    console.error('Unexpected error (kanban_comments create):', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });

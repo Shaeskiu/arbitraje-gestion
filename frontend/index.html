@@ -526,6 +526,9 @@
                             <button data-nav="ventas" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
                                 Ventas
                             </button>
+                            <button data-nav="kanban" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
+                                Kanban tareas
+                            </button>
                         </div>
                     </div>
                     
@@ -668,6 +671,47 @@
                 </div>
             </div>
 
+            <!-- Vista Kanban Tareas -->
+            <div data-view="kanban" class="w-full h-full">
+                <div class="card h-full flex flex-col">
+                    <div class="p-4 md:p-5 flex-shrink-0 border-b border-slate-700 bg-gradient-to-r from-indigo-500/10 to-purple-500/10">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-xl md:text-2xl font-display font-bold text-white">Kanban tareas</h2>
+                                <p class="text-xs md:text-sm text-slate-300 mt-1">
+                                    Nuevas ideas → Esta semana → Solucionado
+                                </p>
+                            </div>
+                            <button type="button" onclick="app.openNewKanbanTaskModal()" class="btn-primary text-xs md:text-sm px-3 md:px-4">
+                                + Nueva tarea
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-4 md:p-5 flex-1 overflow-y-auto">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+                            <div class="flex flex-col">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-semibold text-slate-100 uppercase tracking-wide">Nuevas ideas</h3>
+                                </div>
+                                <div id="kanban-column-nueva_idea" class="space-y-2 flex-1 min-h-[3rem]"></div>
+                            </div>
+                            <div class="flex flex-col">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-semibold text-slate-100 uppercase tracking-wide">Esta semana</h3>
+                                </div>
+                                <div id="kanban-column-esta_semana" class="space-y-2 flex-1 min-h-[3rem]"></div>
+                            </div>
+                            <div class="flex flex-col">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-semibold text-slate-100 uppercase tracking-wide">Solucionado</h3>
+                                </div>
+                                <div id="kanban-column-solucionado" class="space-y-2 flex-1 min-h-[3rem]"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Vista Nueva Oportunidad -->
             <div data-view="new" class="w-full h-full">
                 <div class="card h-full flex flex-col">
@@ -736,7 +780,7 @@
                                 <label class="block text-sm font-medium text-slate-300">Costes (opcional)</label>
                                 <button type="button" onclick="app.addCost()" class="text-xs text-indigo-400 hover:text-indigo-300 font-medium">+ Añadir</button>
                             </div>
-                            <div id="costs-list" class="space-y-1.5 max-h-24 overflow-y-auto mb-1.5">
+                            <div id="costs-list" class="space-y-1.5 max-h-64 overflow-y-auto mb-1.5">
                             </div>
                             <div id="costs-breakdown" class="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/30 text-xs">
                                 <div class="flex justify-between items-center">
@@ -1015,9 +1059,19 @@
             <div data-view="stock" class="w-full h-full">
                 <div class="card">
                     <div class="p-6">
-                        <h2 class="text-3xl font-display font-bold text-white mb-6">Stock Disponible</h2>
-                        <div id="stock-cards" class="cards-responsive space-y-4 mb-4"></div>
-                        <div class="table-responsive overflow-x-auto">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-3xl font-display font-bold text-white">Stock Disponible</h2>
+                        </div>
+                        <div class="mb-4">
+                            <input type="text" 
+                                   id="stock-search-input" 
+                                   placeholder="Buscar por producto, canal, localización..." 
+                                   class="input-field w-full md:w-96 text-sm"
+                                   oninput="app.filterStock(this.value)">
+                        </div>
+                        <div id="stock-cards" class="grid grid-cols-1 gap-4 mb-4"></div>
+                        <!-- Tabla clásica oculta: mantenida solo como referencia / fallback -->
+                        <div class="table-responsive overflow-x-auto hidden">
                             <table class="min-w-full divide-y divide-slate-700">
                                 <thead class="bg-slate-800/50">
                                     <tr>
@@ -1029,6 +1083,7 @@
                                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Fecha Compra</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Fecha Recepción</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Fecha puesta venta</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Precio actual</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Estado</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Localización</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Acciones</th>
@@ -1368,6 +1423,49 @@
         </div>
     </div>
 
+    <!-- Editar Precio Modal -->
+    <div id="editar-precio-modal" class="fixed inset-0 modal-overlay z-50 hidden flex items-center justify-center" onclick="app.closeEditarPrecioModalOnOverlay(event)">
+        <div class="card max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-display font-bold text-white">Editar Precio</h2>
+                    <button onclick="app.closeEditarPrecioModal()" class="text-slate-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <form id="editar-precio-form" class="space-y-4" onsubmit="event.preventDefault(); app.guardarPrecioStock();">
+                    <input type="hidden" id="editar-precio-stock-id">
+                    <div>
+                        <label for="editar-precio-precio" class="block text-sm font-medium text-slate-300 mb-1">Precio (€) *</label>
+                        <input type="number" id="editar-precio-precio" step="0.01" min="0" required class="input-field w-full" placeholder="0.00" oninput="app.updateMargenNetoEnModal()">
+                        <p class="mt-1 text-xs text-slate-400">Precio al que se pondrá a la venta esta unidad</p>
+                        <div id="editar-precio-margen-neto" class="mt-2 p-2 bg-slate-800/50 rounded border border-slate-700">
+                            <div class="text-xs text-slate-400">Margen neto:</div>
+                            <div id="editar-precio-margen-valor" class="text-sm font-semibold text-slate-300">-</div>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="editar-precio-motivo" class="block text-sm font-medium text-slate-300 mb-1">Motivo (opcional)</label>
+                        <textarea id="editar-precio-motivo" rows="2" class="input-field w-full text-sm" placeholder="Ej: Rebaja por tiempo en stock"></textarea>
+                    </div>
+                    <div id="editar-precio-historial" class="border-t border-slate-700 pt-3 mt-2">
+                        <!-- Historial se carga dinámicamente -->
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="app.closeEditarPrecioModal()" class="px-4 py-2 border border-slate-600 rounded-lg text-sm font-medium text-slate-300 bg-slate-800/50 hover:bg-slate-700/50">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn-primary text-sm">
+                            Guardar Precio
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Venta Modal -->
     <div id="venta-modal" class="fixed inset-0 modal-overlay z-50 hidden flex items-center justify-center" onclick="app.closeVentaModalOnOverlay(event)">
         <div class="card max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
@@ -1407,6 +1505,75 @@
                         </button>
                         <button type="submit" class="btn-primary text-sm">
                             Vender
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kanban Task Modal -->
+    <div id="kanban-task-modal" class="fixed inset-0 modal-overlay z-50 hidden items-center justify-center" onclick="app.closeKanbanTaskModalOnOverlay(event)">
+        <div class="card max-w-xl w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <div class="p-5 md:p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl md:text-2xl font-display font-bold text-white">Tarea</h2>
+                    <button onclick="app.closeKanbanTaskModal()" class="text-slate-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <form id="kanban-task-form" class="space-y-4" onsubmit="event.preventDefault(); app.saveKanbanTaskFromModal();">
+                    <input type="hidden" id="kanban-task-id">
+                    <div>
+                        <label for="kanban-task-title" class="block text-xs font-medium text-slate-300 mb-1">Título *</label>
+                        <input id="kanban-task-title" type="text" required class="input-field w-full text-sm" placeholder="Ej: Preparar backlog de la semana">
+                    </div>
+                    <div>
+                        <label for="kanban-task-description" class="block text-xs font-medium text-slate-300 mb-1">Descripción</label>
+                        <textarea id="kanban-task-description" rows="3" class="input-field w-full text-xs" placeholder="Detalles de la tarea..."></textarea>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label for="kanban-task-status" class="block text-xs font-medium text-slate-300 mb-1">Estado</label>
+                            <select id="kanban-task-status" class="input-field w-full text-sm">
+                                <option value="nueva_idea">Nuevas ideas</option>
+                                <option value="esta_semana">Esta semana</option>
+                                <option value="solucionado">Solucionado</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="kanban-task-assignee" class="block text-xs font-medium text-slate-300 mb-1">Asignado a</label>
+                            <div class="flex gap-2">
+                                <input id="kanban-task-assignee" type="email" class="input-field w-full text-xs" placeholder="email@equipo.com">
+                                <button type="button" onclick="(async () => { const email = await app.getCurrentUserEmail(); const input = document.getElementById('kanban-task-assignee'); if (email && input) { input.value = email; } })()" class="px-2 py-1 text-[10px] rounded-lg border border-slate-600 text-slate-200 hover:bg-slate-700">
+                                    Yo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-[11px] text-slate-400">
+                        Creada por: <span id="kanban-task-created-by" class="text-slate-200"></span>
+                    </div>
+                    <div class="border-t border-slate-700 pt-4 mt-2">
+                        <h3 class="text-xs font-semibold text-slate-200 mb-2">Comentarios</h3>
+                        <div id="kanban-comments-list" class="space-y-2 max-h-48 overflow-y-auto mb-3"></div>
+                        <div class="space-y-2">
+                            <textarea id="kanban-new-comment" rows="2" class="input-field w-full text-xs" placeholder="Añadir comentario..."></textarea>
+                            <div class="flex justify-end">
+                                <button type="button" onclick="app.addKanbanCommentFromModal()" class="btn-primary text-xs px-3 py-1.5">
+                                    Comentar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-3 border-t border-slate-700 mt-2">
+                        <button type="button" onclick="app.closeKanbanTaskModal()" class="px-3 py-1.5 border border-slate-600 rounded-lg text-xs font-medium text-slate-300 bg-slate-800/50 hover:bg-slate-700/50">
+                            Cerrar
+                        </button>
+                        <button type="submit" class="btn-primary text-xs px-3 py-1.5">
+                            Guardar tarea
                         </button>
                     </div>
                 </form>

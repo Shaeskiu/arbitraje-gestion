@@ -38,8 +38,8 @@ Esta guía explica paso a paso cómo configurar Supabase Cloud para producción.
    ```
 
    **Importante**: 
-   - Usa la **Project URL** completa (con `https://`)
-   - Usa la clave **service_role** (NO la anon)
+   - Usa la **Project URL** completa (con `https://`) para `SUPABASE_URL`
+   - Usa la clave **service_role** (NO la anon) para `SUPABASE_SERVICE_ROLE_KEY`
    - Esta clave es secreta y solo debe estar en el backend
 
 5. Guarda los cambios. Railway reiniciará automáticamente el backend.
@@ -61,7 +61,7 @@ Esta guía explica paso a paso cómo configurar Supabase Cloud para producción.
 4. Verifica que también tengas configurado:
    - `API_BASE_URL` (debería estar ya configurado)
 
-### 5. Configurar Autenticación en Supabase
+### 6. Configurar Autenticación en Supabase
 
 #### 5.1. Habilitar Email/Password (si no está habilitado)
 
@@ -90,7 +90,7 @@ Si quieres que los usuarios reciban emails de confirmación:
 2. Personaliza los templates si lo deseas
 3. Para desarrollo, puedes usar el modo "Auto Confirm" (los emails se confirman automáticamente)
 
-### 6. Aplicar el Esquema de Base de Datos
+### 7. Aplicar el Esquema de Base de Datos
 
 Si aún no has aplicado el esquema de tu base de datos a Supabase Cloud:
 
@@ -105,7 +105,7 @@ Si aún no has aplicado el esquema de tu base de datos a Supabase Cloud:
 
 **Nota**: El esquema `auth` ya existe en Supabase Cloud, no necesitas crearlo.
 
-### 7. Verificar que Todo Funciona
+### 8. Verificar que Todo Funciona
 
 #### 7.1. Verificar Backend
 

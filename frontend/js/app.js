@@ -12,6 +12,9 @@ const app = {
     allLocalizaciones: [],
     salesChartInstance: null,
     marginsChartInstance: null,
+    kanbanTasks: [],
+    currentKanbanTaskId: null,
+    stockItems: [],
     
     async init() {
         // Inicializar cliente de Supabase
@@ -552,6 +555,8 @@ const app = {
             this.refreshChannels();
         } else if (viewName === 'localizaciones') {
             this.refreshLocalizaciones();
+        } else if (viewName === 'kanban') {
+            this.refreshKanban();
         } else if (viewName === 'new') {
             this.initializeOpportunityForm();
         } else if (viewName === 'channel-form') {
@@ -1044,6 +1049,177 @@ const app = {
             if (container) {
                 container.innerHTML = '<p class="text-red-500">Error al cargar los datos de márgenes</p>';
             }
+        }
+    },
+
+    // ============================================
+    // KANBAN TAREAS
+    // ============================================
+
+    async refreshKanban() {
+        try {
+            this.kanbanTasks = await kanbanStorage.getAllTasks();
+            ui.renderKanbanBoard(this.kanbanTasks);
+        } catch (error) {
+            console.error('Error refreshing kanban tasks:', error);
+            alert('Error al cargar las tareas del kanban.');
+        }
+    },
+
+    async getCurrentUserEmail() {
+        try {
+            if (!window.auth || !window.auth.getCurrentUser) {
+                return null;
+            }
+            const user = await window.auth.getCurrentUser();
+            return user && user.email ? user.email : null;
+        } catch (error) {
+            console.error('Error getting current user email:', error);
+            return null;
+        }
+    },
+
+    async openNewKanbanTaskModal() {
+        try {
+            const email = await this.getCurrentUserEmail();
+            this.currentKanbanTaskId = null;
+            ui.renderKanbanTaskModal(null, [], email);
+        } catch (error) {
+            console.error('Error opening new kanban task modal:', error);
+        }
+    },
+
+    async openKanbanTaskModalFromBoard(id) {
+        try {
+            const task = (this.kanbanTasks || []).find(t => t.id === id);
+            if (!task) {
+                alert('No se pudo encontrar la tarea seleccionada.');
+                return;
+            }
+            this.currentKanbanTaskId = id;
+            const [comments, email] = await Promise.all([
+                kanbanStorage.getComments(id),
+                this.getCurrentUserEmail()
+            ]);
+            ui.renderKanbanTaskModal(task, comments, email);
+        } catch (error) {
+            console.error('Error opening kanban task modal:', error);
+            alert('Error al abrir la tarea.');
+        }
+    },
+
+    closeKanbanTaskModal() {
+        const modal = document.getElementById('kanban-task-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }
+        this.currentKanbanTaskId = null;
+    },
+
+    closeKanbanTaskModalOnOverlay(event) {
+        if (event.target.id === 'kanban-task-modal') {
+            this.closeKanbanTaskModal();
+        }
+    },
+
+    async saveKanbanTaskFromModal() {
+        const idInput = document.getElementById('kanban-task-id');
+        const titleInput = document.getElementById('kanban-task-title');
+        const descInput = document.getElementById('kanban-task-description');
+        const statusSelect = document.getElementById('kanban-task-status');
+        const assigneeInput = document.getElementById('kanban-task-assignee');
+
+        if (!titleInput || !statusSelect) {
+            alert('Error en el formulario de tarea.');
+            return;
+        }
+
+        const title = titleInput.value.trim();
+        const description = descInput ? descInput.value.trim() : '';
+        const status = statusSelect.value || 'nueva_idea';
+        const assigneeEmail = assigneeInput && assigneeInput.value ? assigneeInput.value.trim() : null;
+
+        if (!title) {
+            alert('El título de la tarea es obligatorio.');
+            return;
+        }
+
+        try {
+            const id = idInput ? idInput.value : '';
+            if (id) {
+                await kanbanStorage.updateTask(id, {
+                    title,
+                    description,
+                    status,
+                    assigneeEmail
+                });
+            } else {
+                const createdByEmail = await this.getCurrentUserEmail();
+                if (!createdByEmail) {
+                    alert('No se ha podido obtener el usuario autenticado para crear la tarea.');
+                    return;
+                }
+                await kanbanStorage.createTask({
+                    title,
+                    description,
+                    status,
+                    assigneeEmail,
+                    createdByEmail
+                });
+            }
+
+            this.closeKanbanTaskModal();
+            await this.refreshKanban();
+        } catch (error) {
+            console.error('Error saving kanban task:', error);
+            alert('Error al guardar la tarea del kanban.');
+        }
+    },
+
+    async deleteKanbanTask(id) {
+        if (!id) return;
+        if (!confirm('¿Seguro que quieres eliminar esta tarea?')) {
+            return;
+        }
+        try {
+            const success = await kanbanStorage.deleteTask(id);
+            if (!success) {
+                alert('Error al eliminar la tarea.');
+                return;
+            }
+            await this.refreshKanban();
+        } catch (error) {
+            console.error('Error deleting kanban task:', error);
+            alert('Error al eliminar la tarea.');
+        }
+    },
+
+    async addKanbanCommentFromModal() {
+        if (!this.currentKanbanTaskId) {
+            alert('No hay tarea seleccionada.');
+            return;
+        }
+        const commentInput = document.getElementById('kanban-new-comment');
+        if (!commentInput) return;
+        const content = commentInput.value.trim();
+        if (!content) {
+            return;
+        }
+
+        try {
+            const email = await this.getCurrentUserEmail();
+            if (!email) {
+                alert('No se ha podido obtener el usuario autenticado para comentar.');
+                return;
+            }
+            await kanbanStorage.addComment(this.currentKanbanTaskId, content, email);
+            const task = (this.kanbanTasks || []).find(t => t.id === this.currentKanbanTaskId) || null;
+            const comments = await kanbanStorage.getComments(this.currentKanbanTaskId);
+            ui.renderKanbanTaskModal(task, comments, email);
+        } catch (error) {
+            console.error('Error adding kanban comment:', error);
+            alert('Error al añadir el comentario.');
         }
     },
     
@@ -2240,22 +2416,261 @@ const app = {
                 return;
             }
             
+            // Cambiar estado a "disponible" en backend
             await stockStorage.ponerAVenta(id);
-            this.refreshStock();
+            
+            // Refrescar listado de stock para que aparezca como disponible
+            await this.refreshStock();
+            
+            // Justo al poner a la venta, pedir el primer precio de oferta
+            await this.openEditarPrecioModal(id);
         } catch (error) {
             console.error('Error poniendo stock a venta:', error);
-            alert('Error al poner el stock a venta: ' + (error.message || 'Error desconocido'));
+            alert('Error al poner el stock a venta o abrir el precio: ' + (error.message || 'Error desconocido'));
+        }
+    },
+    
+    async openEditarPrecioModal(stockId) {
+        try {
+            const stockItems = await stockStorage.getAll();
+            const stock = stockItems.find(s => s.id === stockId);
+            
+            if (!stock) {
+                alert('Stock no encontrado');
+                return;
+            }
+            
+            const modal = document.getElementById('editar-precio-modal');
+            const stockIdInput = document.getElementById('editar-precio-stock-id');
+            const precioInput = document.getElementById('editar-precio-precio');
+            const motivoInput = document.getElementById('editar-precio-motivo');
+            const historialContainer = document.getElementById('editar-precio-historial');
+            
+            if (!modal || !stockIdInput || !precioInput) {
+                console.error('Editar precio modal elements not found');
+                return;
+            }
+            
+            // Mover modal al body si es necesario
+            const currentParent = modal.parentElement;
+            if (currentParent && currentParent !== document.body) {
+                document.body.appendChild(modal);
+            }
+            
+            stockIdInput.value = stockId;
+            precioInput.value = stock.precioActual || '';
+            if (motivoInput) motivoInput.value = '';
+            
+            // Guardar datos del stock para calcular margen neto dinámicamente
+            precioInput.dataset.costeUnitario = stock.costeUnitarioReal || 0;
+            precioInput.dataset.opportunityCosts = JSON.stringify(stock.opportunityCosts || []);
+            precioInput.dataset.compraUnidades = stock.compraUnidades || 1;
+            precioInput.dataset.compraPrecioUnitario = stock.compraPrecioUnitario || 0;
+            
+            // Calcular margen neto inicial
+            this.updateMargenNetoEnModal();
+            
+            // Cargar historial de precios
+            if (historialContainer) {
+                try {
+                    const historial = await stockStorage.getHistorialPrecios(stockId);
+                    if (historial && historial.length > 0) {
+                        const historialHtml = historial.slice(0, 5).map(h => {
+                            const fecha = new Date(h.fecha_desde).toLocaleDateString('es-ES');
+                            const tipoLabels = {
+                                'publicacion': 'Publicación',
+                                'bajada': 'Bajada',
+                                'subida': 'Subida',
+                                'ajuste': 'Ajuste'
+                            };
+                            return `
+                                <div class="text-xs text-slate-400 py-1 border-b border-slate-700">
+                                    <span class="font-medium text-slate-300">€${parseFloat(h.precio).toFixed(2)}</span>
+                                    <span class="text-slate-500"> - ${tipoLabels[h.tipo_evento] || h.tipo_evento}</span>
+                                    <span class="text-slate-500"> (${fecha})</span>
+                                </div>
+                            `;
+                        }).join('');
+                        historialContainer.innerHTML = `
+                            <div class="text-xs font-semibold text-slate-300 mb-2">Últimos cambios:</div>
+                            ${historialHtml}
+                        `;
+                    } else {
+                        historialContainer.innerHTML = '<div class="text-xs text-slate-400">No hay historial de precios</div>';
+                    }
+                } catch (err) {
+                    historialContainer.innerHTML = '<div class="text-xs text-slate-400">Error al cargar historial</div>';
+                }
+            }
+            
+            modal.classList.remove('hidden');
+            modal.style.cssText = 'display: flex !important; position: fixed !important; z-index: 9999 !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100vw !important; height: 100vh !important; margin: 0 !important; padding: 0 !important;';
+        } catch (error) {
+            console.error('Error abriendo modal de editar precio:', error);
+            alert('Error al abrir el modal: ' + (error.message || 'Error desconocido'));
+        }
+    },
+    
+    updateMargenNetoEnModal() {
+        const precioInput = document.getElementById('editar-precio-precio');
+        const margenValor = document.getElementById('editar-precio-margen-valor');
+        
+        if (!precioInput || !margenValor) return;
+        
+        const precio = parseFloat(precioInput.value) || 0;
+        const costeUnitario = parseFloat(precioInput.dataset.costeUnitario || 0);
+        const opportunityCosts = JSON.parse(precioInput.dataset.opportunityCosts || '[]');
+        const compraUnidades = parseInt(precioInput.dataset.compraUnidades || 1);
+        const compraPrecioUnitario = parseFloat(precioInput.dataset.compraPrecioUnitario || 0);
+        
+        if (precio === 0) {
+            margenValor.textContent = '-';
+            margenValor.className = 'text-sm font-semibold text-slate-300';
+            return;
+        }
+        
+        // Calcular costes de oportunidad por unidad según el precio introducido
+        let opportunityCostsPerUnit = 0;
+        opportunityCosts.forEach(cost => {
+            if (cost.type === 'fixed') {
+                // Coste fijo se divide entre las unidades de la compra
+                opportunityCostsPerUnit += (parseFloat(cost.value) || 0) / compraUnidades;
+            } else if (cost.type === 'percentage') {
+                // Coste porcentual sobre precio de compra o venta
+                if (cost.base === 'sale') {
+                    // Coste sobre precio de venta
+                    opportunityCostsPerUnit += (precio * parseFloat(cost.value || 0)) / 100;
+                } else if (cost.base === 'purchase') {
+                    // Coste sobre precio de compra
+                    opportunityCostsPerUnit += (compraPrecioUnitario * parseFloat(cost.value || 0)) / 100;
+                }
+            }
+        });
+        
+        const costeTotalPorUnidad = costeUnitario + opportunityCostsPerUnit;
+        const margenNeto = precio - costeTotalPorUnidad;
+        
+        // Calcular porcentaje de margen
+        const margenPorcentual = costeTotalPorUnidad > 0 
+            ? (margenNeto / costeTotalPorUnidad) * 100 
+            : null;
+        
+        const margenFormatted = `€${margenNeto.toFixed(2)}${margenPorcentual !== null ? ` (${margenPorcentual >= 0 ? '+' : ''}${margenPorcentual.toFixed(1)}%)` : ''}`;
+        
+        margenValor.textContent = margenFormatted;
+        margenValor.className = `text-sm font-semibold ${margenNeto >= 0 ? 'text-green-400' : 'text-red-400'}`;
+    },
+    
+    closeEditarPrecioModal() {
+        const modal = document.getElementById('editar-precio-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.cssText = 'display: none !important;';
+        }
+        
+        const form = document.getElementById('editar-precio-form');
+        if (form) {
+            form.reset();
+        }
+        
+        // Limpiar margen neto
+        const margenValor = document.getElementById('editar-precio-margen-valor');
+        if (margenValor) {
+            margenValor.textContent = '-';
+            margenValor.className = 'text-sm font-semibold text-slate-300';
+        }
+    },
+    
+    closeEditarPrecioModalOnOverlay(event) {
+        if (event.target.id === 'editar-precio-modal') {
+            this.closeEditarPrecioModal();
+        }
+    },
+    
+    async guardarPrecioStock() {
+        const stockIdInput = document.getElementById('editar-precio-stock-id');
+        const precioInput = document.getElementById('editar-precio-precio');
+        const motivoInput = document.getElementById('editar-precio-motivo');
+        
+        if (!stockIdInput || !precioInput) {
+            alert('Error: elementos del formulario no encontrados');
+            return;
+        }
+        
+        const stockId = stockIdInput.value;
+        const precio = parseFloat(precioInput.value);
+        const motivo = motivoInput ? motivoInput.value.trim() : null;
+        
+        if (!stockId) {
+            alert('ID de stock inválido');
+            return;
+        }
+        
+        if (isNaN(precio) || precio < 0) {
+            alert('Por favor, introduce un precio válido (>= 0)');
+            return;
+        }
+        
+        try {
+            await stockStorage.setPrecioStock(stockId, precio, motivo);
+            this.closeEditarPrecioModal();
+            this.refreshStock();
+        } catch (error) {
+            console.error('Error guardando precio:', error);
+            alert('Error al guardar el precio: ' + (error.message || 'Error desconocido'));
         }
     },
     
     async refreshStock() {
         try {
             const stockItems = await stockStorage.getAll();
+            this.stockItems = stockItems; // Guardar para filtrado
             ui.renderStock(stockItems);
         } catch (error) {
             console.error('Error refreshing stock:', error);
             alert('Error al cargar el stock.');
         }
+    },
+    
+    filterStock(searchText) {
+        const searchLower = searchText.toLowerCase().trim();
+        const cards = document.querySelectorAll('#stock-cards [data-stock-id]');
+        
+        if (!searchLower) {
+            // Si no hay texto, mostrar todas las tarjetas
+            cards.forEach(card => {
+                card.style.display = '';
+            });
+            return;
+        }
+        
+        // Filtrar por nombre de producto, canal, localización, estado, etc.
+        cards.forEach(card => {
+            const stockId = card.dataset.stockId;
+            const stock = this.stockItems.find(s => s.id === stockId);
+            
+            if (!stock) {
+                card.style.display = 'none';
+                return;
+            }
+            
+            // Buscar en múltiples campos
+            const productoName = (stock.productoName || '').toLowerCase();
+            const canalName = (stock.canalOrigenName || '').toLowerCase();
+            const localizacionName = (stock.localizacion?.name || stock.localizacionName || '').toLowerCase();
+            const estado = (stock.estado || '').toLowerCase();
+            const precioActual = stock.precioActual !== null && stock.precioActual !== undefined 
+                ? stock.precioActual.toString() 
+                : '';
+            
+            const matches = productoName.includes(searchLower) ||
+                          canalName.includes(searchLower) ||
+                          localizacionName.includes(searchLower) ||
+                          estado.includes(searchLower) ||
+                          precioActual.includes(searchLower);
+            
+            card.style.display = matches ? '' : 'none';
+        });
     },
     
     async refreshCompras() {

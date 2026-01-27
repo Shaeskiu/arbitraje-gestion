@@ -176,6 +176,22 @@ const ui = {
         });
     },
     
+    toggleStockDetails(stockId) {
+        const details = document.querySelector(`[data-stock-details="${stockId}"]`);
+        if (!details) return;
+
+        const isHidden = details.classList.contains('hidden');
+        details.classList.toggle('hidden', !isHidden);
+
+        const card = details.closest('[data-stock-id]');
+        if (!card) return;
+
+        const btn = card.querySelector('button[onclick^="ui.toggleStockDetails"]');
+        if (btn) {
+            btn.textContent = isHidden ? 'Ver menos' : 'Ver más';
+        }
+    },
+    
     formatCurrency(value) {
         return '€' + parseFloat(value || 0).toFixed(2);
     },
@@ -872,10 +888,15 @@ const ui = {
         const cardsContainer = document.getElementById('stock-cards') || (() => {
             const container = document.createElement('div');
             container.id = 'stock-cards';
-            container.className = 'cards-responsive space-y-4';
+            container.className = 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-4';
             const tableContainer = document.querySelector('[data-view="stock"] .overflow-x-auto');
             if (tableContainer && tableContainer.parentNode) {
                 tableContainer.parentNode.insertBefore(container, tableContainer);
+            } else {
+                const stockView = document.querySelector('[data-view="stock"] .card .p-6');
+                if (stockView) {
+                    stockView.appendChild(container);
+                }
             }
             return container;
         })();
@@ -889,7 +910,7 @@ const ui = {
         if (cardsContainer) cardsContainer.innerHTML = '';
         
         if (!stockItems || stockItems.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="11" class="px-6 py-4 text-center text-slate-400">No hay stock disponible</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="12" class="px-6 py-4 text-center text-slate-400">No hay stock disponible</td></tr>';
             if (cardsContainer) cardsContainer.innerHTML = '<div class="text-center text-slate-400 py-8">No hay stock disponible</div>';
             return;
         }
@@ -943,6 +964,11 @@ const ui = {
                 `;
             } else if (estado === 'disponible' && stock.unidadesDisponibles > 0) {
                 accionesHtml = `
+                    <button onclick="app.openEditarPrecioModal('${stock.id}')" 
+                            class="text-blue-600 hover:text-blue-900 px-3 py-1 rounded hover:bg-blue-50 text-sm font-medium mr-2" 
+                            title="Editar precio">
+                        Precio
+                    </button>
                     <button onclick="app.openVentaModal('${stock.id}', ${stock.unidadesDisponibles})" 
                             class="text-green-600 hover:text-green-900 px-3 py-1 rounded hover:bg-green-50 text-sm font-medium" 
                             title="Registrar Venta">
@@ -950,6 +976,11 @@ const ui = {
                     </button>
                 `;
             }
+            
+            // Formatear precio actual
+            const precioActualFormatted = stock.precioActual !== null && stock.precioActual !== undefined 
+                ? `€${stock.precioActual.toFixed(2)}` 
+                : '-';
             
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap">
@@ -980,6 +1011,9 @@ const ui = {
                     <div class="text-sm text-slate-300">${formattedFechaDisponible}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-white">${precioActualFormatted}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${estadoClass}">
                         ${estadoLabel}
                     </span>
@@ -994,80 +1028,107 @@ const ui = {
             
             tbody.appendChild(row);
             
-            // Crear card para móvil
+            // Crear tarjeta full-width (desktop + móvil)
             if (cardsContainer) {
                 const card = document.createElement('div');
-                card.className = 'card p-4 animate-fade-in';
-                
-                // Crear botón de acción para móvil
+                card.className = 'card p-3 md:p-4 w-full flex flex-col gap-2';
+                card.dataset.stockId = stock.id;
+
+                // Acciones en tarjeta
                 let accionesButtonHtml = '';
                 if (estado === 'pendiente_recibir') {
                     accionesButtonHtml = `
                         <button onclick="app.recepcionarStock('${stock.id}')" 
-                                class="w-full px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
+                                class="px-2.5 py-1 text-xs font-medium text-indigo-300 border border-indigo-500/40 rounded hover:bg-indigo-500/10">
                             Recepcionar
                         </button>
                     `;
                 } else if (estado === 'recepcionado') {
                     accionesButtonHtml = `
                         <button onclick="app.ponerAVentaStock('${stock.id}')" 
-                                class="w-full px-4 py-2 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                                class="px-2.5 py-1 text-xs font-medium text-green-300 border border-green-500/40 rounded hover:bg-green-500/10">
                             A la venta
                         </button>
                     `;
                 } else if (estado === 'disponible' && stock.unidadesDisponibles > 0) {
                     accionesButtonHtml = `
+                        <button onclick="app.openEditarPrecioModal('${stock.id}')" 
+                                class="px-2.5 py-1 text-xs font-medium text-blue-300 border border-blue-500/40 rounded hover:bg-blue-500/10 mr-2">
+                            Precio
+                        </button>
                         <button onclick="app.openVentaModal('${stock.id}', ${stock.unidadesDisponibles})" 
-                                class="w-full px-4 py-2 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                                class="px-2.5 py-1 text-xs font-medium text-green-300 border border-green-500/40 rounded hover:bg-green-500/10">
                             Vender
                         </button>
                     `;
                 }
-                
+
                 card.innerHTML = `
-                    <div class="flex justify-between items-start mb-3">
-                        <h3 class="font-display font-semibold text-lg text-white">${this.escapeHtml(stock.productoName || 'N/A')}</h3>
-                        <span class="px-2 py-1 text-xs font-semibold rounded-full ${estadoClass}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-display font-semibold text-sm md:text-base text-white">
+                                ${this.escapeHtml(stock.productoName || 'N/A')}
+                            </h3>
+                            <p class="text-xs text-slate-400">
+                                ${this.escapeHtml(stock.canalOrigenName || 'N/A')}
+                            </p>
+                        </div>
+                        <span class="px-2 py-1 text-[10px] md:text-[11px] font-semibold rounded-full ${estadoClass}">
                             ${estadoLabel}
                         </span>
                     </div>
-                    <div class="space-y-2 mb-4">
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-300">Canal Origen</span>
-                            <span class="font-medium text-white">${this.escapeHtml(stock.canalOrigenName || 'N/A')}</span>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-1.5 md:gap-2 text-xs text-slate-200">
+                        <div>
+                            <div class="text-slate-400">Coste unitario</div>
+                            <div class="font-medium">€${parseFloat(stock.costeUnitarioReal || 0).toFixed(2)}</div>
                         </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-300">Coste Unitario</span>
-                            <span class="font-medium text-white">€${parseFloat(stock.costeUnitarioReal || 0).toFixed(2)}</span>
+                        <div>
+                            <div class="text-slate-400">Unidades</div>
+                            <div class="font-medium">${stock.unidadesDisponibles} / ${stock.unidadesIniciales}</div>
                         </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-300">Unidades</span>
-                            <span class="font-medium text-white">${stock.unidadesDisponibles} / ${stock.unidadesIniciales}</span>
+                        <div>
+                            <div class="text-slate-400">Valor total</div>
+                            <div class="font-semibold text-indigo-400">€${valorTotal.toFixed(2)}</div>
                         </div>
-                        <div class="flex justify-between text-sm border-t border-slate-700 pt-2">
-                            <span class="text-slate-300 font-semibold">Valor Total</span>
-                            <span class="font-bold text-indigo-400 text-lg">€${valorTotal.toFixed(2)}</span>
+                        <div>
+                            <div class="text-slate-400">Precio actual</div>
+                            <div class="font-semibold">${precioActualFormatted}</div>
                         </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-300">Fecha Compra</span>
-                            <span class="font-medium text-white">${formattedDate}</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-300">Fecha Recepción</span>
-                            <span class="font-medium text-white">${formattedFechaRecepcion}</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-300">Fecha puesta venta</span>
-                            <span class="font-medium text-white">${formattedFechaDisponible}</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-300">Localización</span>
-                            <span class="font-medium text-white">${this.escapeHtml(localizacionName)}</span>
+                        <div>
+                            <div class="text-slate-400">Margen neto</div>
+                            <div class="font-semibold ${stock.margenNeto !== null && stock.margenNeto >= 0 ? 'text-green-400' : stock.margenNeto !== null ? 'text-red-400' : 'text-slate-400'}">
+                                ${stock.margenNeto !== null 
+                                    ? `€${stock.margenNeto.toFixed(2)}${stock.margenPorcentual !== null ? ` (${stock.margenPorcentual >= 0 ? '+' : ''}${stock.margenPorcentual.toFixed(1)}%)` : ''}` 
+                                    : '-'}
+                            </div>
                         </div>
                     </div>
-                    ${accionesButtonHtml ? `<div class="pt-3 border-t border-slate-700">
-                        ${accionesButtonHtml}
-                    </div>` : ''}
+                    <div class="flex items-center justify-between pt-2">
+                        <button type="button"
+                                class="text-xs text-slate-400 hover:text-slate-200"
+                                onclick="ui.toggleStockDetails('${stock.id}')">
+                            Ver más
+                        </button>
+                        <div class="flex gap-2">
+                            ${accionesButtonHtml}
+                        </div>
+                    </div>
+                    <div class="border-t border-slate-700 pt-3 mt-2 hidden" data-stock-details="${stock.id}">
+                        <div class="space-y-2 text-xs text-slate-200">
+                            <div>
+                                <span class="text-slate-400">Fecha compra:</span> <span class="ml-2">${formattedDate}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400">Fecha recepción:</span> <span class="ml-2">${formattedFechaRecepcion}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400">Fecha puesta venta:</span> <span class="ml-2">${formattedFechaDisponible}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400">Localización:</span> <span class="ml-2">${this.escapeHtml(localizacionName)}</span>
+                            </div>
+                        </div>
+                    </div>
                 `;
                 cardsContainer.appendChild(card);
             }
@@ -1391,6 +1452,133 @@ const ui = {
                 cardsContainer.appendChild(card);
             }
         });
+    },
+
+    // ============================================
+    // KANBAN TAREAS
+    // ============================================
+
+    renderKanbanBoard(tasks) {
+        const nuevaCol = document.getElementById('kanban-column-nueva_idea');
+        const semanaCol = document.getElementById('kanban-column-esta_semana');
+        const solucionCol = document.getElementById('kanban-column-solucionado');
+
+        if (!nuevaCol || !semanaCol || !solucionCol) {
+            console.error('Kanban columns not found in DOM');
+            return;
+        }
+
+        [nuevaCol, semanaCol, solucionCol].forEach(col => {
+            col.innerHTML = '';
+        });
+
+        if (!tasks || tasks.length === 0) {
+            nuevaCol.innerHTML = '<p class="text-sm text-slate-400 italic">Sin tareas aún. Crea la primera tarea.</p>';
+            return;
+        }
+
+        const statusToColumn = {
+            'nueva_idea': nuevaCol,
+            'esta_semana': semanaCol,
+            'solucionado': solucionCol
+        };
+
+        tasks.forEach(task => {
+            const col = statusToColumn[task.status] || nuevaCol;
+            const card = document.createElement('div');
+            card.className = 'card p-3 md:p-4 mb-3 cursor-pointer hover:border-indigo-500/50 hover:shadow-lg animate-fade-in';
+            const assignee = task.assigneeEmail ? this.escapeHtml(task.assigneeEmail) : 'Sin asignar';
+            const createdDate = task.createdAt ? new Date(task.createdAt).toLocaleDateString('es-ES') : '';
+
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <h4 class="text-sm md:text-base font-semibold text-white line-clamp-2">${this.escapeHtml(task.title)}</h4>
+                    <button 
+                        onclick="event.stopPropagation(); app.deleteKanbanTask('${task.id}')"
+                        class="text-xs text-slate-400 hover:text-red-400 ml-2"
+                        title="Eliminar tarea">
+                        ✕
+                    </button>
+                </div>
+                <p class="text-xs text-slate-300 mb-2 line-clamp-3">${this.escapeHtml(task.description || '') || '<span class="italic text-slate-500">Sin descripción</span>'}</p>
+                <div class="flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Asignado: <span class="text-slate-200">${assignee}</span></span>
+                    ${createdDate ? `<span>${createdDate}</span>` : ''}
+                </div>
+            `;
+
+            card.addEventListener('click', () => {
+                app.openKanbanTaskModalFromBoard(task.id);
+            });
+
+            col.appendChild(card);
+        });
+    },
+
+    renderKanbanTaskModal(task, comments, currentUserEmail = null) {
+        const modal = document.getElementById('kanban-task-modal');
+        if (!modal) {
+            console.error('kanban-task-modal not found');
+            return;
+        }
+
+        const idInput = document.getElementById('kanban-task-id');
+        const titleInput = document.getElementById('kanban-task-title');
+        const descInput = document.getElementById('kanban-task-description');
+        const statusSelect = document.getElementById('kanban-task-status');
+        const assigneeInput = document.getElementById('kanban-task-assignee');
+        const createdByLabel = document.getElementById('kanban-task-created-by');
+        const commentsContainer = document.getElementById('kanban-comments-list');
+        const commentInput = document.getElementById('kanban-new-comment');
+
+        if (!titleInput || !descInput || !statusSelect || !assigneeInput || !commentsContainer || !commentInput) {
+            console.error('Kanban modal inputs not found');
+            return;
+        }
+
+        if (task) {
+            idInput.value = task.id;
+            titleInput.value = task.title || '';
+            descInput.value = task.description || '';
+            statusSelect.value = task.status || 'nueva_idea';
+            assigneeInput.value = task.assigneeEmail || (currentUserEmail || '');
+            if (createdByLabel) {
+                createdByLabel.textContent = task.createdByEmail || '';
+            }
+        } else {
+            idInput.value = '';
+            titleInput.value = '';
+            descInput.value = '';
+            statusSelect.value = 'nueva_idea';
+            assigneeInput.value = currentUserEmail || '';
+            if (createdByLabel) {
+                createdByLabel.textContent = currentUserEmail || '';
+            }
+        }
+
+        commentsContainer.innerHTML = '';
+        if (!comments || comments.length === 0) {
+            commentsContainer.innerHTML = '<p class="text-xs text-slate-400 italic">Sin comentarios todavía.</p>';
+        } else {
+            comments.forEach(c => {
+                const item = document.createElement('div');
+                item.className = 'border border-slate-700 rounded-lg p-2.5 bg-slate-800/60';
+                const dateStr = c.createdAt ? new Date(c.createdAt).toLocaleString('es-ES') : '';
+                item.innerHTML = `
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[11px] font-medium text-indigo-300">${this.escapeHtml(c.authorEmail || '')}</span>
+                        <span class="text-[10px] text-slate-400">${this.escapeHtml(dateStr)}</span>
+                    </div>
+                    <p class="text-xs text-slate-100 whitespace-pre-wrap">${this.escapeHtml(c.content)}</p>
+                `;
+                commentsContainer.appendChild(item);
+            });
+        }
+
+        commentInput.value = '';
+
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
     },
 
     /**
