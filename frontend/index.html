@@ -104,6 +104,9 @@
             height: 100%;
             overflow-y: auto;
             overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
         }
         
         main [data-view="new"].active {
@@ -158,18 +161,33 @@
             animation: slideIn 0.3s ease-out;
         }
         
-        /* Cards con estilo glassmorphism */
+        /* Cards con estilo glassmorphism - optimizado para scroll */
         .card {
             background: rgba(30, 41, 59, 0.8);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            will-change: auto;
+        }
+        
+        /* Optimización específica para cards - sin backdrop-filter para mejor rendimiento del scroll */
+        [data-view="stock"] .card,
+        [data-view="compras"] .card,
+        [data-view="ventas"] .card,
+        [data-view="opportunities"] .card,
+        [data-view="kanban"] .card,
+        [data-view="channels"] .card,
+        [data-view="localizaciones"] .card,
+        [data-view="dashboard"] .card {
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            background: rgba(30, 41, 59, 0.95);
         }
         
         .card:hover {
-            transform: translateY(-4px);
             box-shadow: 0 12px 48px rgba(99, 102, 241, 0.2);
             border-color: rgba(99, 102, 241, 0.3);
         }
@@ -181,34 +199,13 @@
             font-weight: 600;
             padding: 0.75rem 1.75rem;
             border-radius: 12px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
             position: relative;
             overflow: hidden;
         }
         
-        .btn-primary::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
-        }
-        
-        .btn-primary:hover::before {
-            left: 100%;
-        }
-        
         .btn-primary:hover {
-            transform: translateY(-2px);
             box-shadow: 0 6px 24px rgba(99, 102, 241, 0.5);
-        }
-        
-        .btn-primary:active {
-            transform: translateY(0);
         }
         
         /* Inputs mejorados */
@@ -218,7 +215,6 @@
             border-radius: 12px;
             padding: 0.875rem 1.125rem;
             color: var(--color-text);
-            transition: all 0.3s ease;
         }
         
         .input-field::placeholder {
@@ -241,7 +237,6 @@
         
         /* Navegación */
         .nav-link {
-            transition: all 0.3s ease;
             border-radius: 12px;
             position: relative;
         }
@@ -256,7 +251,6 @@
             height: 0;
             background: var(--color-primary);
             border-radius: 0 3px 3px 0;
-            transition: height 0.3s ease;
         }
         
         .nav-link:hover::before {
@@ -264,7 +258,6 @@
         }
         
         .nav-link:hover {
-            transform: translateX(4px);
             background: rgba(99, 102, 241, 0.1);
         }
         
@@ -291,10 +284,9 @@
             border-radius: 9999px;
             font-size: 0.75rem;
             font-weight: 600;
-            transition: all 0.2s ease;
         }
         
-        /* Scrollbar personalizado */
+        /* Scrollbar personalizado - optimizado para rendimiento */
         ::-webkit-scrollbar {
             width: 10px;
             height: 10px;
@@ -314,11 +306,39 @@
             background: rgba(99, 102, 241, 0.7);
         }
         
-        /* Tablas mejoradas */
-        table tbody tr {
-            transition: all 0.2s ease;
+        /* Optimización de scroll para mejor rendimiento */
+        main {
+            -webkit-overflow-scrolling: touch;
+            will-change: scroll-position;
         }
         
+        [data-view] {
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+        }
+        
+        /* Optimización de renderizado para cards durante scroll - aplicado a todas las vistas */
+        #stock-cards,
+        #compras-cards,
+        #ventas-cards,
+        #opportunities-cards {
+            contain: layout style;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+        }
+        
+        #stock-cards > *,
+        #compras-cards > *,
+        #ventas-cards > *,
+        #opportunities-cards > * {
+            contain: layout style paint;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            will-change: auto;
+            position: relative;
+        }
+        
+        /* Tablas mejoradas */
         table tbody tr:hover {
             background-color: rgba(99, 102, 241, 0.1);
         }
@@ -432,7 +452,7 @@
     <div data-view="login" class="flex items-center justify-center min-h-screen relative overflow-hidden">
         <div class="relative max-w-md w-full space-y-8 p-6 md:p-8 animate-fade-in z-10">
             <div class="text-center">
-                <div class="inline-block p-5 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 backdrop-blur-lg rounded-3xl shadow-2xl mb-6 transform hover:scale-105 transition-transform border border-white/10">
+                <div class="inline-block p-5 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 backdrop-blur-lg rounded-3xl shadow-2xl mb-6 border border-white/10">
                     <img src="./assets/logo.png" alt="Arbitraje Gestión" class="h-16" />
                 </div>
                 <h2 class="text-4xl font-display font-bold text-white mb-2">Iniciar Sesión</h2>
@@ -495,7 +515,7 @@
         <aside id="sidebar" class="sidebar w-64 shadow-2xl flex flex-col z-50">
             <div class="p-6 flex-1 flex flex-col">
                 <div class="flex items-center justify-between mb-8">
-                    <button onclick="app.showView('dashboard')" class="cursor-pointer hover:opacity-80 transition-opacity focus:outline-none">
+                    <button onclick="app.showView('dashboard')" class="cursor-pointer hover:opacity-80 focus:outline-none">
                         <img src="./assets/logo.png" alt="Arbitraje Gestión" class="h-50" />
                     </button>
                     <button id="close-sidebar" onclick="app.toggleSidebar()" class="md:hidden text-slate-400 hover:text-white">
@@ -505,10 +525,10 @@
                     </button>
                 </div>
                 <nav class="space-y-1 flex-1 flex flex-col">
-                    <button data-nav="dashboard" class="nav-link w-full text-left px-4 py-3 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
+                    <button data-nav="dashboard" class="nav-link w-full text-left px-4 py-3 text-sm font-medium text-white hover:text-white rounded-lg">
                         Dashboard
                     </button>
-                    <button data-nav="opportunities" class="nav-link w-full text-left px-4 py-3 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
+                    <button data-nav="opportunities" class="nav-link w-full text-left px-4 py-3 text-sm font-medium text-white hover:text-white rounded-lg">
                         Oportunidades
                     </button>
                     
@@ -517,16 +537,16 @@
                             Operaciones
                         </div>
                         <div class="ml-2 space-y-1">
-                            <button data-nav="compras" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
+                            <button data-nav="compras" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg">
                                 Compras
                             </button>
-                            <button data-nav="stock" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
+                            <button data-nav="stock" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg">
                                 Stock
                             </button>
-                            <button data-nav="ventas" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
+                            <button data-nav="ventas" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg">
                                 Ventas
                             </button>
-                            <button data-nav="kanban" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
+                            <button data-nav="kanban" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg">
                                 Kanban tareas
                             </button>
                         </div>
@@ -537,17 +557,17 @@
                             Configuración
                         </div>
                         <div class="ml-2 space-y-1">
-                            <button data-nav="channels" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
+                            <button data-nav="channels" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg">
                                 Canales
                             </button>
-                            <button data-nav="localizaciones" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg transition-colors">
+                            <button data-nav="localizaciones" class="nav-link w-full text-left px-4 py-2 text-sm font-medium text-white hover:text-white rounded-lg">
                                 Localizaciones
                             </button>
                         </div>
                     </div>
                     
                     <div class="mt-auto pt-4 border-t border-slate-700">
-                        <button onclick="app.logout()" class="w-full text-left px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-lg transition-colors">
+                        <button onclick="app.logout()" class="w-full text-left px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-lg">
                             Cerrar Sesión
                         </button>
                     </div>
@@ -562,9 +582,9 @@
             </svg>
         </button>
         
-        <main class="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 pt-16 md:pt-6">
+        <main class="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 pt-16 md:pt-6" style="-webkit-overflow-scrolling: touch; transform: translateZ(0);">
             <!-- Vista de Oportunidades -->
-            <div data-view="opportunities" class="w-full h-full">
+            <div data-view="opportunities" class="w-full h-full" style="transform: translateZ(0); -webkit-transform: translateZ(0); contain: layout style;">
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-3xl font-display font-bold text-white">Oportunidades</h2>
@@ -612,7 +632,7 @@
             </div>
 
             <!-- Vista Dashboard -->
-            <div data-view="dashboard" class="w-full h-full">
+            <div data-view="dashboard" class="w-full h-full" style="transform: translateZ(0); -webkit-transform: translateZ(0); contain: layout style;">
                 <div class="space-y-6">
                     <h2 class="text-3xl font-display font-bold text-white">Dashboard de Negocio</h2>
                     
@@ -672,7 +692,7 @@
             </div>
 
             <!-- Vista Kanban Tareas -->
-            <div data-view="kanban" class="w-full h-full">
+            <div data-view="kanban" class="w-full h-full" style="transform: translateZ(0); -webkit-transform: translateZ(0); contain: layout style;">
                 <div class="card h-full flex flex-col">
                     <div class="p-4 md:p-5 flex-shrink-0 border-b border-slate-700 bg-gradient-to-r from-indigo-500/10 to-purple-500/10">
                         <div class="flex items-center justify-between">
@@ -727,7 +747,7 @@
                         </div>
 
                         <div class="border-t border-slate-700 pt-2">
-                            <button type="button" onclick="app.toggleLinksSection()" class="flex items-center justify-between w-full text-left text-xs text-slate-400 hover:text-slate-300 transition-colors group py-1">
+                            <button type="button" onclick="app.toggleLinksSection()" class="flex items-center justify-between w-full text-left text-xs text-slate-400 hover:text-slate-300 group py-1">
                                 <span class="flex items-center gap-1.5">
                                     <svg class="w-3.5 h-3.5 transition-transform" id="links-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -824,7 +844,7 @@
                         </div>
 
                         <div class="border-t border-slate-700 pt-2">
-                            <button type="button" onclick="app.toggleNotesSection()" class="flex items-center justify-between w-full text-left text-xs text-slate-400 hover:text-slate-300 transition-colors group py-1">
+                            <button type="button" onclick="app.toggleNotesSection()" class="flex items-center justify-between w-full text-left text-xs text-slate-400 hover:text-slate-300 group py-1">
                                 <span class="flex items-center gap-1.5">
                                     <svg class="w-3.5 h-3.5 transition-transform" id="notes-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -839,7 +859,7 @@
                     </form>
                     <div class="flex-shrink-0 border-t border-slate-700 p-3 md:p-4 bg-slate-800/50">
                         <div class="flex justify-end gap-2 md:gap-3">
-                            <button type="button" onclick="app.showView('dashboard')" class="px-3 md:px-4 py-2 border border-slate-600 rounded-lg text-xs md:text-sm font-medium text-slate-300 bg-slate-800/50 hover:bg-slate-700/50 transition-colors">
+                            <button type="button" onclick="app.showView('dashboard')" class="px-3 md:px-4 py-2 border border-slate-600 rounded-lg text-xs md:text-sm font-medium text-slate-300 bg-slate-800/50 hover:bg-slate-700/50">
                                 Cancelar
                             </button>
                             <button type="submit" form="opportunity-form" class="btn-primary text-xs md:text-sm px-3 md:px-4">
@@ -995,7 +1015,7 @@
             </div>
 
             <!-- Vista Canales -->
-            <div data-view="channels" class="w-full h-full">
+            <div data-view="channels" class="w-full h-full" style="transform: translateZ(0); -webkit-transform: translateZ(0); contain: layout style;">
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-3xl font-display font-bold text-white">Gestión de Canales</h2>
@@ -1026,7 +1046,7 @@
             </div>
 
             <!-- Vista Localizaciones -->
-            <div data-view="localizaciones" class="w-full h-full">
+            <div data-view="localizaciones" class="w-full h-full" style="transform: translateZ(0); -webkit-transform: translateZ(0); contain: layout style;">
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-3xl font-display font-bold text-white">Gestión de Localizaciones</h2>
@@ -1056,9 +1076,9 @@
             </div>
 
             <!-- Vista Stock -->
-            <div data-view="stock" class="w-full h-full">
+            <div data-view="stock" class="w-full h-full" style="transform: translateZ(0); -webkit-transform: translateZ(0); contain: layout style;">
                 <div class="card">
-                    <div class="p-6">
+                    <div class="p-6" style="transform: translateZ(0); -webkit-transform: translateZ(0);">
                         <div class="flex justify-between items-center mb-6">
                             <h2 class="text-3xl font-display font-bold text-white">Stock Disponible</h2>
                         </div>
@@ -1069,7 +1089,7 @@
                                    class="input-field w-full md:w-96 text-sm"
                                    oninput="app.filterStock(this.value)">
                         </div>
-                        <div id="stock-cards" class="grid grid-cols-1 gap-4 mb-4"></div>
+                        <div id="stock-cards" class="space-y-4 mb-4" style="transform: translateZ(0); -webkit-transform: translateZ(0);"></div>
                         <!-- Tabla clásica oculta: mantenida solo como referencia / fallback -->
                         <div class="table-responsive overflow-x-auto hidden">
                             <table class="min-w-full divide-y divide-slate-700">
@@ -1098,9 +1118,9 @@
             </div>
 
             <!-- Vista Compras -->
-            <div data-view="compras" class="w-full h-full">
+            <div data-view="compras" class="w-full h-full" style="transform: translateZ(0); -webkit-transform: translateZ(0); contain: layout style;">
                 <div class="card">
-                    <div class="p-6">
+                    <div class="p-6" style="transform: translateZ(0); -webkit-transform: translateZ(0);">
                         <h2 class="text-3xl font-display font-bold text-white mb-6">Compras</h2>
                         <div id="compras-cards" class="cards-responsive space-y-4 mb-4"></div>
                         <div class="table-responsive overflow-x-auto">
@@ -1125,9 +1145,9 @@
             </div>
 
             <!-- Vista Ventas -->
-            <div data-view="ventas" class="w-full h-full">
+            <div data-view="ventas" class="w-full h-full" style="transform: translateZ(0); -webkit-transform: translateZ(0); contain: layout style;">
                 <div class="card">
-                    <div class="p-6">
+                    <div class="p-6" style="transform: translateZ(0); -webkit-transform: translateZ(0);">
                         <h2 class="text-3xl font-display font-bold text-white mb-6">Ventas</h2>
                         <div id="ventas-cards" class="cards-responsive space-y-4 mb-4"></div>
                         <div class="table-responsive overflow-x-auto">

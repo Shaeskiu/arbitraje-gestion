@@ -133,6 +133,9 @@ const ui = {
             if (cardsContainer) {
                 const card = document.createElement('div');
                 card.className = 'card p-4';
+                card.style.transform = 'translateZ(0)';
+                card.style.webkitTransform = 'translateZ(0)';
+                card.style.willChange = 'auto';
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
                         <h3 class="font-display font-semibold text-lg text-white">${this.escapeHtml(opportunity.productName)}</h3>
@@ -163,10 +166,10 @@ const ui = {
                         </div>
                     </div>
                     <div class="flex gap-2 pt-3 border-t border-slate-700">
-                        <button onclick="app.showDetail('${opportunity.id}')" class="flex-1 px-3 py-2 text-sm font-medium text-indigo-300 bg-indigo-500/20 rounded-lg hover:bg-indigo-500/30 transition-colors">
+                        <button onclick="app.showDetail('${opportunity.id}')" class="flex-1 px-3 py-2 text-sm font-medium text-indigo-300 bg-indigo-500/20 rounded-lg hover:bg-indigo-500/30">
                             Ver
                         </button>
-                        ${opportunity.status !== 'convertida' ? `<button onclick="app.openCompraModal('${opportunity.id}', '${opportunity.canalOrigenId || opportunity.originChannelId || ''}', ${precioCompra}, '${this.escapeHtml(opportunity.productName)}')" class="flex-1 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">
+                        ${opportunity.status !== 'convertida' ? `<button onclick="app.openCompraModal('${opportunity.id}', '${opportunity.canalOrigenId || opportunity.originChannelId || ''}', ${precioCompra}, '${this.escapeHtml(opportunity.productName)}')" class="flex-1 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">
                             Comprar
                         </button>` : ''}
                     </div>
@@ -1032,6 +1035,9 @@ const ui = {
             if (cardsContainer) {
                 const card = document.createElement('div');
                 card.className = 'card p-3 md:p-4 w-full flex flex-col gap-2';
+                card.style.transform = 'translateZ(0)';
+                card.style.webkitTransform = 'translateZ(0)';
+                card.style.willChange = 'auto';
                 card.dataset.stockId = stock.id;
 
                 // Acciones en tarjeta
@@ -1292,6 +1298,9 @@ const ui = {
             if (cardsContainer) {
                 const card = document.createElement('div');
                 card.className = 'card p-4 animate-fade-in';
+                card.style.transform = 'translateZ(0)';
+                card.style.webkitTransform = 'translateZ(0)';
+                card.style.willChange = 'auto';
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
                         <h3 class="font-display font-semibold text-lg text-white">${this.escapeHtml(producto)}</h3>
@@ -1317,7 +1326,7 @@ const ui = {
                     </div>
                     ${compra.oportunidad_id ? `<div class="pt-3 border-t border-slate-700">
                         <button onclick="app.showDetail('${compra.oportunidad_id}')" 
-                                class="w-full px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2">
+                                class="w-full px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 flex items-center justify-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -1413,6 +1422,9 @@ const ui = {
             if (cardsContainer) {
                 const card = document.createElement('div');
                 card.className = 'card p-4 animate-fade-in';
+                card.style.transform = 'translateZ(0)';
+                card.style.webkitTransform = 'translateZ(0)';
+                card.style.willChange = 'auto';
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
                         <h3 class="font-display font-semibold text-lg text-white">${this.escapeHtml(producto)}</h3>
@@ -1444,7 +1456,7 @@ const ui = {
                     </div>
                     <div class="pt-3 border-t border-slate-700">
                         <button onclick="app.showVentaDetail('${venta.id}')" 
-                                class="w-full px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
+                                class="w-full px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100">
                             Ver Detalle
                         </button>
                     </div>
@@ -1487,6 +1499,9 @@ const ui = {
             const col = statusToColumn[task.status] || nuevaCol;
             const card = document.createElement('div');
             card.className = 'card p-3 md:p-4 mb-3 cursor-pointer hover:border-indigo-500/50 hover:shadow-lg animate-fade-in';
+            card.style.transform = 'translateZ(0)';
+            card.style.webkitTransform = 'translateZ(0)';
+            card.style.willChange = 'auto';
             const assignee = task.assigneeEmail ? this.escapeHtml(task.assigneeEmail) : 'Sin asignar';
             const createdDate = task.createdAt ? new Date(task.createdAt).toLocaleDateString('es-ES') : '';
 

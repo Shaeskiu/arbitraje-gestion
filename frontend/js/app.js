@@ -2640,6 +2640,7 @@ const app = {
             // Si no hay texto, mostrar todas las tarjetas
             cards.forEach(card => {
                 card.style.display = '';
+                card.style.visibility = '';
             });
             return;
         }
@@ -2651,6 +2652,7 @@ const app = {
             
             if (!stock) {
                 card.style.display = 'none';
+                card.style.visibility = 'hidden';
                 return;
             }
             
@@ -2669,7 +2671,13 @@ const app = {
                           estado.includes(searchLower) ||
                           precioActual.includes(searchLower);
             
-            card.style.display = matches ? '' : 'none';
+            if (matches) {
+                card.style.display = '';
+                card.style.visibility = '';
+            } else {
+                card.style.display = 'none';
+                card.style.visibility = 'hidden';
+            }
         });
     },
     
