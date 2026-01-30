@@ -1082,12 +1082,18 @@
                         <div class="flex justify-between items-center mb-6">
                             <h2 class="text-3xl font-display font-bold text-white">Stock Disponible</h2>
                         </div>
-                        <div class="mb-4">
+                        <div class="mb-4 flex flex-wrap items-center gap-3">
                             <input type="text" 
                                    id="stock-search-input" 
                                    placeholder="Buscar por producto, canal, localización..." 
-                                   class="input-field w-full md:w-96 text-sm"
-                                   oninput="app.filterStock(this.value)">
+                                   class="input-field w-full md:w-80 text-sm"
+                                   oninput="app.filterStock()">
+                            <select id="stock-filter-estado" class="input-field text-sm w-full md:w-48" onchange="app.filterStock()">
+                                <option value="">Todos los estados</option>
+                                <option value="pendiente_recibir">Pendiente de recibir</option>
+                                <option value="recepcionado">Recepcionado</option>
+                                <option value="disponible">En venta</option>
+                            </select>
                         </div>
                         <div id="stock-cards" class="space-y-4 mb-4" style="transform: translateZ(0); -webkit-transform: translateZ(0);"></div>
                         <!-- Tabla clásica oculta: mantenida solo como referencia / fallback -->
@@ -1122,7 +1128,10 @@
                 <input type="file" id="compra-factura-input" class="hidden" accept=".pdf,image/jpeg,image/png,image/webp" data-compra-id="">
                 <div class="card">
                     <div class="p-6" style="transform: translateZ(0); -webkit-transform: translateZ(0);">
-                        <h2 class="text-3xl font-display font-bold text-white mb-6">Compras</h2>
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-3xl font-display font-bold text-white">Compras</h2>
+                            <input type="text" id="compras-search-input" placeholder="Buscar por producto, canal, fecha..." class="input-field text-sm w-full md:w-80" oninput="app.filterAndRenderCompras()">
+                        </div>
                         <div id="compras-cards" class="cards-responsive space-y-4 mb-4"></div>
                         <div class="table-responsive overflow-x-auto">
                             <table class="min-w-full divide-y divide-slate-700">
@@ -1150,7 +1159,10 @@
             <div data-view="ventas" class="w-full h-full" style="transform: translateZ(0); -webkit-transform: translateZ(0); contain: layout style;">
                 <div class="card">
                     <div class="p-6" style="transform: translateZ(0); -webkit-transform: translateZ(0);">
-                        <h2 class="text-3xl font-display font-bold text-white mb-6">Ventas</h2>
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-3xl font-display font-bold text-white">Ventas</h2>
+                            <input type="text" id="ventas-search-input" placeholder="Buscar por producto, canal, fecha..." class="input-field text-sm w-full md:w-80" oninput="app.filterAndRenderVentas()">
+                        </div>
                         <div id="ventas-cards" class="cards-responsive space-y-4 mb-4"></div>
                         <div class="table-responsive overflow-x-auto">
                             <table class="min-w-full divide-y divide-slate-700">

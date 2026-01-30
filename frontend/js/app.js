@@ -15,6 +15,8 @@ const app = {
     kanbanTasks: [],
     currentKanbanTaskId: null,
     stockItems: [],
+    compras: [],
+    ventas: [],
     
     async init() {
         // Inicializar cliente de Supabase
@@ -2633,51 +2635,58 @@ const app = {
             const stockItems = await stockStorage.getAll();
             this.stockItems = stockItems; // Guardar para filtrado
             ui.renderStock(stockItems);
+            this.filterStock(); // Aplicar filtro de búsqueda y estado si hay
         } catch (error) {
             console.error('Error refreshing stock:', error);
             alert('Error al cargar el stock.');
         }
     },
     
-    filterStock(searchText) {
-        const searchLower = searchText.toLowerCase().trim();
+    filterStock() {
+        const searchInput = document.getElementById('stock-search-input');
+        const estadoSelect = document.getElementById('stock-filter-estado');
+        const searchLower = (searchInput?.value || '').toLowerCase().trim();
+        const estadoFilter = (estadoSelect?.value || '').trim();
         const cards = document.querySelectorAll('#stock-cards [data-stock-id]');
-        
-        if (!searchLower) {
-            // Si no hay texto, mostrar todas las tarjetas
-            cards.forEach(card => {
-                card.style.display = '';
-                card.style.visibility = '';
-            });
-            return;
-        }
-        
-        // Filtrar por nombre de producto, canal, localización, estado, etc.
+
         cards.forEach(card => {
             const stockId = card.dataset.stockId;
             const stock = this.stockItems.find(s => s.id === stockId);
-            
+
             if (!stock) {
                 card.style.display = 'none';
                 card.style.visibility = 'hidden';
                 return;
             }
-            
-            // Buscar en múltiples campos
+
+            // Filtro por estado
+            if (estadoFilter && (stock.estado || '') !== estadoFilter) {
+                card.style.display = 'none';
+                card.style.visibility = 'hidden';
+                return;
+            }
+
+            // Filtro por texto (si no hay texto, mostrar si ya pasó el filtro de estado)
+            if (!searchLower) {
+                card.style.display = '';
+                card.style.visibility = '';
+                return;
+            }
+
             const productoName = (stock.productoName || '').toLowerCase();
             const canalName = (stock.canalOrigenName || '').toLowerCase();
             const localizacionName = (stock.localizacion?.name || stock.localizacionName || '').toLowerCase();
             const estado = (stock.estado || '').toLowerCase();
-            const precioActual = stock.precioActual !== null && stock.precioActual !== undefined 
-                ? stock.precioActual.toString() 
+            const precioActual = stock.precioActual !== null && stock.precioActual !== undefined
+                ? stock.precioActual.toString()
                 : '';
-            
+
             const matches = productoName.includes(searchLower) ||
                           canalName.includes(searchLower) ||
                           localizacionName.includes(searchLower) ||
                           estado.includes(searchLower) ||
                           precioActual.includes(searchLower);
-            
+
             if (matches) {
                 card.style.display = '';
                 card.style.visibility = '';
@@ -2691,11 +2700,28 @@ const app = {
     async refreshCompras() {
         try {
             const compras = await comprasStorage.getAll();
-            ui.renderCompras(compras);
+            this.compras = compras;
+            this.filterAndRenderCompras();
         } catch (error) {
             console.error('Error refreshing compras:', error);
             alert('Error al cargar las compras.');
         }
+    },
+
+    filterAndRenderCompras() {
+        const searchInput = document.getElementById('compras-search-input');
+        const searchTerm = (searchInput?.value || '').toLowerCase().trim();
+        let filtered = this.compras || [];
+        if (searchTerm) {
+            filtered = filtered.filter(c => {
+                const producto = (c.product_name || c.oportunidad_product_name || '').toLowerCase();
+                const canal = (c.canal_origen_name || '').toLowerCase();
+                const fecha = c.fecha_compra ? new Date(c.fecha_compra).toLocaleDateString('es-ES').toLowerCase() : '';
+                const total = (c.total_compra != null ? String(c.total_compra) : '');
+                return producto.includes(searchTerm) || canal.includes(searchTerm) || fecha.includes(searchTerm) || total.includes(searchTerm);
+            });
+        }
+        ui.renderCompras(filtered);
     },
 
     openFacturaUpload(compraId) {
@@ -2737,11 +2763,28 @@ const app = {
     async refreshVentas() {
         try {
             const ventas = await ventasStorage.getAll();
-            ui.renderVentas(ventas);
+            this.ventas = ventas;
+            this.filterAndRenderVentas();
         } catch (error) {
             console.error('Error refreshing ventas:', error);
             alert('Error al cargar las ventas.');
         }
+    },
+
+    filterAndRenderVentas() {
+        const searchInput = document.getElementById('ventas-search-input');
+        const searchTerm = (searchInput?.value || '').toLowerCase().trim();
+        let filtered = this.ventas || [];
+        if (searchTerm) {
+            filtered = filtered.filter(v => {
+                const producto = (v.product_name || '').toLowerCase();
+                const canal = (v.canal_destino_name || '').toLowerCase();
+                const fecha = v.fecha_venta ? new Date(v.fecha_venta).toLocaleDateString('es-ES').toLowerCase() : '';
+                const total = (v.total_venta != null ? String(v.total_venta) : '');
+                return producto.includes(searchTerm) || canal.includes(searchTerm) || fecha.includes(searchTerm) || total.includes(searchTerm);
+            });
+        }
+        ui.renderVentas(filtered);
     },
 
     async showVentaDetail(id) {

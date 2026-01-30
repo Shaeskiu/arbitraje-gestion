@@ -931,7 +931,7 @@ const ui = {
             const estadoLabels = {
                 'pendiente_recibir': 'Pendiente de recibir',
                 'recepcionado': 'Recepcionado',
-                'disponible': 'Disponible'
+                'disponible': 'En venta'
             };
             
             const estadoColors = {
