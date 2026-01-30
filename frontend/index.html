@@ -1128,9 +1128,11 @@
                 <input type="file" id="compra-factura-input" class="hidden" accept=".pdf,image/jpeg,image/png,image/webp" data-compra-id="">
                 <div class="card">
                     <div class="p-6" style="transform: translateZ(0); -webkit-transform: translateZ(0);">
-                        <div class="flex justify-between items-center mb-6">
+                        <div class="mb-6">
                             <h2 class="text-3xl font-display font-bold text-white">Compras</h2>
-                            <input type="text" id="compras-search-input" placeholder="Buscar por producto, canal, fecha..." class="input-field text-sm w-full md:w-80" oninput="app.filterAndRenderCompras()">
+                        </div>
+                        <div class="mb-4">
+                            <input type="text" id="compras-search-input" placeholder="Buscar por producto, canal, fecha..." class="input-field w-full md:w-96 text-sm" oninput="app.filterAndRenderCompras()">
                         </div>
                         <div id="compras-cards" class="cards-responsive space-y-4 mb-4"></div>
                         <div class="table-responsive overflow-x-auto">
@@ -1159,9 +1161,11 @@
             <div data-view="ventas" class="w-full h-full" style="transform: translateZ(0); -webkit-transform: translateZ(0); contain: layout style;">
                 <div class="card">
                     <div class="p-6" style="transform: translateZ(0); -webkit-transform: translateZ(0);">
-                        <div class="flex justify-between items-center mb-6">
+                        <div class="mb-6">
                             <h2 class="text-3xl font-display font-bold text-white">Ventas</h2>
-                            <input type="text" id="ventas-search-input" placeholder="Buscar por producto, canal, fecha..." class="input-field text-sm w-full md:w-80" oninput="app.filterAndRenderVentas()">
+                        </div>
+                        <div class="mb-4">
+                            <input type="text" id="ventas-search-input" placeholder="Buscar por producto, canal, fecha..." class="input-field w-full md:w-96 text-sm" oninput="app.filterAndRenderVentas()">
                         </div>
                         <div id="ventas-cards" class="cards-responsive space-y-4 mb-4"></div>
                         <div class="table-responsive overflow-x-auto">
