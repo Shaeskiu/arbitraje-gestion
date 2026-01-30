@@ -8,8 +8,10 @@ services:
       KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
       KONG_DNS_ORDER: LAST,A,CNAME
       KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth
-      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
-      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+      KONG_NGINX_HTTP_CLIENT_MAX_BODY_SIZE: "50m"
+      KONG_NGINX_HTTP_CLIENT_BODY_BUFFER_SIZE: "16m"
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: "16m"
+      KONG_NGINX_PROXY_PROXY_BUFFERS: "8 16m"
     ports:
       - "8000:8000"  # API REST (Supabase URL)
     volumes:
@@ -53,7 +55,7 @@ services:
     container_name: arbitraje-postgrest
     environment:
       PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}@supabase-db:5432/postgres
-      PGRST_DB_SCHEMAS: public
+      PGRST_DB_SCHEMAS: public,storage
       PGRST_DB_ANON_ROLE: postgres
       PGRST_DB_USE_LEGACY_GUCS: "false"
       PGRST_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
@@ -89,6 +91,33 @@ services:
       - arbitraje-network
     restart: unless-stopped
 
+  # Supabase Storage (para facturas y archivos)
+  storage:
+    image: supabase/storage-api:v1.7.0
+    container_name: arbitraje-storage
+    environment:
+      ANON_KEY: ${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0}
+      SERVICE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
+      POSTGREST_URL: http://postgrest:3000
+      PGRST_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}@supabase-db:5432/postgres?options=-c%20search_path%3Dstorage%2Cpublic
+      FILE_SIZE_LIMIT: "52428800"
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: stub
+      GLOBAL_S3_BUCKET: stub
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+      postgrest:
+        condition: service_started
+    networks:
+      - arbitraje-network
+    restart: unless-stopped
+    volumes:
+      - storage_data:/var/lib/storage
+
   # Backend API
   backend:
     build:
@@ -99,7 +128,7 @@ services:
       NODE_ENV: ${ENVIRONMENT:-development}
       PORT: ${PORT:-3001}
       SUPABASE_URL: ${SUPABASE_URL:-http://kong:8000}
-      # Kong es el API Gateway que expone todos los servicios de Supabase
+      SUPABASE_STORAGE_DIRECT_URL: ${SUPABASE_STORAGE_DIRECT_URL:-http://storage:5000}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
     ports:
@@ -109,6 +138,8 @@ services:
         condition: service_started
       supabase-db:
         condition: service_healthy
+      storage:
+        condition: service_started
     networks:
       - arbitraje-network
     restart: unless-stopped
@@ -135,4 +166,6 @@ networks:
 
 volumes:
   supabase_db_data:
+    driver: local
+  storage_data:
     driver: local

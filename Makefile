@@ -29,6 +29,7 @@ help:
 	@echo "  make db-reset       - Resetear la base de datos (elimina todos los datos)"
 	@echo "  make status         - Ver estado de los contenedores"
 	@echo "  make load-fixtures  - Cargar datos de ejemplo (fixtures) en la base de datos"
+	@echo "  make db-migrate     - Aplicar migración de vistas storage (public.buckets/objects)"
 
 # Construir imágenes
 build:
@@ -118,6 +119,12 @@ db-reset:
 # Ver estado
 status:
 	$(COMPOSE_CMD) ps
+
+# Aplicar migración de vistas storage (para que Storage API encuentre buckets/objects en public)
+db-migrate:
+	@echo "Aplicando migración add-public-storage-views.sql..."
+	@cat supabase/migrations/add-public-storage-views.sql | $(COMPOSE_CMD) exec -T supabase-db psql -U postgres -d postgres
+	@echo "Migración aplicada."
 
 # Cargar fixtures de desarrollo
 load-fixtures:

@@ -1,9 +1,24 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import multer from 'multer';
 import { supabase } from './supabaseClient.js';
 
 const app = express();
+
+// Multer: memoria para subir facturas (PDF/imágenes) a Supabase Storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Solo se permiten PDF o imágenes (JPEG, PNG, WebP)'), false);
+    }
+  }
+});
 const PORT = process.env.PORT || 3001;
 
 const isValidUUID = (str) => {
@@ -1332,6 +1347,277 @@ app.put('/compras/:id', async (req, res) => {
     return res.json(updatedCompra);
   } catch (error) {
     console.error('Unexpected error (update compra):', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// --------------------------------------------
+// Factura por compra (Supabase Storage)
+// --------------------------------------------
+const FACTURAS_BUCKET = 'facturas';
+const SIGNED_URL_EXPIRES = 300; // 5 minutos
+const STORAGE_DIRECT_URL = process.env.SUPABASE_STORAGE_DIRECT_URL || ''; // ej. http://storage:5000 (sin Kong)
+
+/** Cache del ID del bucket facturas (Storage API directa usa ID en rutas de objeto) */
+let facturasBucketIdCache = null;
+
+async function getFacturasBucketId() {
+  if (!STORAGE_DIRECT_URL) return null;
+  if (facturasBucketIdCache) return facturasBucketIdCache;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) return null;
+  try {
+    const r = await fetch(`${STORAGE_DIRECT_URL}/bucket/`, {
+      headers: { Authorization: `Bearer ${serviceKey}` }
+    });
+    if (!r.ok) return null;
+    const list = await r.json().catch(() => []);
+    const bucket = Array.isArray(list) ? list.find(b => b.name === FACTURAS_BUCKET) : null;
+    if (bucket && bucket.id) {
+      facturasBucketIdCache = bucket.id;
+      console.log('[factura] facturas bucket id=', facturasBucketIdCache);
+    }
+  } catch (e) {
+    console.warn('[factura] getFacturasBucketId:', e.message);
+  }
+  return facturasBucketIdCache;
+}
+
+async function ensureFacturasBucket() {
+  if (STORAGE_DIRECT_URL) {
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceKey) {
+      console.warn('[factura] ensureFacturasBucket: SUPABASE_SERVICE_ROLE_KEY no definida');
+      return;
+    }
+    const bucketUrl = `${STORAGE_DIRECT_URL}/bucket/`;
+    console.log('[factura] ensureFacturasBucket: POST', bucketUrl);
+    try {
+      const r = await fetch(bucketUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${serviceKey}`
+        },
+        body: JSON.stringify({ name: FACTURAS_BUCKET, public: false })
+      });
+      const bodyText = await r.text().catch(() => '');
+      console.log('[factura] ensureFacturasBucket: status=', r.status, 'body=', bodyText?.slice(0, 200));
+      if (!r.ok && r.status !== 400) {
+        if (!bodyText.includes('already exists') && !bodyText.includes('duplicate')) {
+          console.warn('[factura] ensureFacturasBucket: error', r.status, bodyText);
+        }
+      }
+    } catch (e) {
+      console.warn('[factura] ensureFacturasBucket: excepción', e.message, e.cause);
+    }
+    return;
+  }
+  const { error } = await supabase.storage.createBucket(FACTURAS_BUCKET, { public: false });
+  if (error && error.message !== 'The resource already exists') {
+    console.warn('Facturas bucket:', error.message);
+  }
+}
+
+async function uploadFacturaDirect(storagePath, buffer, contentType) {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY required');
+  const bucketId = await getFacturasBucketId();
+  const bucketRef = bucketId || FACTURAS_BUCKET; // Storage API directa puede requerir ID
+  const url = `${STORAGE_DIRECT_URL}/object/${bucketRef}/${storagePath}`;
+  console.log('[factura] uploadFacturaDirect: POST', url, 'size=', buffer?.length, 'contentType=', contentType);
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': contentType,
+      Authorization: `Bearer ${serviceKey}`,
+      'x-upsert': 'true'
+    },
+    body: buffer
+  });
+  const bodyText = await r.text().catch(() => '');
+  console.log('[factura] uploadFacturaDirect: status=', r.status, 'body=', bodyText?.slice(0, 300));
+  if (!r.ok) {
+    throw new Error(bodyText || `Storage API ${r.status}`);
+  }
+}
+
+async function removeFacturaDirect(storagePath) {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) return;
+  const bucketId = await getFacturasBucketId();
+  const bucketRef = bucketId || FACTURAS_BUCKET;
+  const url = `${STORAGE_DIRECT_URL}/object/${bucketRef}/${storagePath}`;
+  await fetch(url, { method: 'DELETE', headers: { Authorization: `Bearer ${serviceKey}` } });
+}
+
+app.post('/compras/:id/factura', upload.single('factura'), async (req, res) => {
+  const id = req.params?.id;
+  console.log('[factura] POST /compras/:id/factura id=', id, 'STORAGE_DIRECT_URL=', STORAGE_DIRECT_URL || '(vacío)');
+  try {
+    if (!id || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid compra ID' });
+    }
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ error: 'No se envió ningún archivo (campo: factura)' });
+    }
+
+    const { data: compra, error: compraError } = await supabase
+      .from('compras')
+      .select('id, factura_path')
+      .eq('id', id)
+      .single();
+
+    if (compraError) {
+      if (compraError.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Compra not found' });
+      }
+      console.error('Supabase error (compra factura):', compraError);
+      return res.status(500).json({ error: 'Error de base de datos', details: compraError.message });
+    }
+    if (!compra) {
+      return res.status(404).json({ error: 'Compra not found' });
+    }
+
+    await ensureFacturasBucket();
+
+    const ext = req.file.originalname && req.file.originalname.includes('.')
+      ? req.file.originalname.slice(req.file.originalname.lastIndexOf('.'))
+      : (req.file.mimetype === 'application/pdf' ? '.pdf' : '.jpg');
+    const safeName = `factura${ext}`;
+    const storagePath = `${id}/${safeName}`;
+
+    if (STORAGE_DIRECT_URL) {
+      try {
+        await uploadFacturaDirect(storagePath, req.file.buffer, req.file.mimetype);
+      } catch (uploadErr) {
+        console.error('Storage upload error (direct):', uploadErr);
+        return res.status(500).json({ error: 'Error subiendo factura', details: uploadErr.message });
+      }
+      if (compra.factura_path && compra.factura_path !== storagePath) {
+        await removeFacturaDirect(compra.factura_path);
+      }
+    } else {
+      const { error: uploadError } = await supabase.storage
+        .from(FACTURAS_BUCKET)
+        .upload(storagePath, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        const details = (uploadError && (uploadError.message || uploadError.error_description || String(uploadError))) || 'Error desconocido';
+        return res.status(500).json({ error: 'Error subiendo factura', details });
+      }
+
+      if (compra.factura_path && compra.factura_path !== storagePath) {
+        await supabase.storage.from(FACTURAS_BUCKET).remove([compra.factura_path]);
+      }
+    }
+
+    const { error: updateError } = await supabase
+      .from('compras')
+      .update({ factura_path: storagePath })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Update factura_path error:', updateError);
+      return res.status(500).json({ error: 'Error guardando referencia a factura', details: updateError.message });
+    }
+
+    return res.status(200).json({ factura_path: storagePath });
+  } catch (err) {
+    if (err && err.message && err.message.includes('Solo se permiten')) {
+      return res.status(400).json({ error: err.message });
+    }
+    console.error('Unexpected error (upload factura):', err);
+    const details = (err && err.message) ? String(err.message) : 'Error inesperado';
+    return res.status(500).json({ error: 'Error subiendo factura', details });
+  }
+});
+
+app.get('/compras/:id/factura', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid compra ID' });
+    }
+
+    const { data: compra, error: compraError } = await supabase
+      .from('compras')
+      .select('factura_path')
+      .eq('id', id)
+      .single();
+
+    if (compraError || !compra || !compra.factura_path) {
+      return res.status(404).json({ error: 'Factura no encontrada' });
+    }
+
+    if (STORAGE_DIRECT_URL) {
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!serviceKey) return res.status(500).json({ error: 'Configuración de Storage incompleta' });
+      const bucketId = await getFacturasBucketId();
+      const bucketRef = bucketId || FACTURAS_BUCKET;
+      const url = `${STORAGE_DIRECT_URL}/object/authenticated/${bucketRef}/${compra.factura_path}`;
+      const r = await fetch(url, { headers: { Authorization: `Bearer ${serviceKey}` } });
+      if (!r.ok) {
+        console.error('Storage get (direct):', r.status);
+        return res.status(500).json({ error: 'Error descargando factura' });
+      }
+      const buf = Buffer.from(await r.arrayBuffer());
+      const ct = r.headers.get('content-type') || 'application/octet-stream';
+      res.setHeader('Content-Type', ct);
+      res.setHeader('Content-Disposition', `inline; filename="${compra.factura_path.split('/').pop()}"`);
+      return res.send(buf);
+    }
+
+    const { data: signed, error: signError } = await supabase.storage
+      .from(FACTURAS_BUCKET)
+      .createSignedUrl(compra.factura_path, SIGNED_URL_EXPIRES);
+
+    if (signError || !signed?.signedUrl) {
+      console.error('Signed URL error:', signError);
+      return res.status(500).json({ error: 'Error generando enlace de descarga' });
+    }
+
+    return res.redirect(302, signed.signedUrl);
+  } catch (error) {
+    console.error('Unexpected error (get factura):', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.delete('/compras/:id/factura', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id || !isValidUUID(id)) {
+      return res.status(400).json({ error: 'Invalid compra ID' });
+    }
+
+    const { data: compra, error: compraError } = await supabase
+      .from('compras')
+      .select('factura_path')
+      .eq('id', id)
+      .single();
+
+    if (compraError || !compra) {
+      return res.status(404).json({ error: 'Compra not found' });
+    }
+    if (!compra.factura_path) {
+      return res.status(204).send();
+    }
+
+    if (STORAGE_DIRECT_URL) {
+      await removeFacturaDirect(compra.factura_path);
+    } else {
+      await supabase.storage.from(FACTURAS_BUCKET).remove([compra.factura_path]);
+    }
+    await supabase.from('compras').update({ factura_path: null }).eq('id', id);
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Unexpected error (delete factura):', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
@@ -2823,6 +3109,14 @@ app.use((req, res, next) => {
     return originalJson.call(this, data);
   };
   next();
+});
+
+// Errores de multer (tamaño, tipo de archivo)
+app.use((err, req, res, next) => {
+  if (err && (err.code === 'LIMIT_FILE_SIZE' || err.message && err.message.includes('Solo se permiten'))) {
+    return res.status(400).json({ error: err.message || 'Archivo no válido (máx. 10 MB, solo PDF o imágenes)' });
+  }
+  next(err);
 });
 
 app.listen(PORT, () => {

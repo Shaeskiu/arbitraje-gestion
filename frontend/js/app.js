@@ -333,6 +333,13 @@ const app = {
                 this.registrarCompra();
             });
         }
+
+        const compraFacturaInput = document.getElementById('compra-factura-input');
+        if (compraFacturaInput) {
+            compraFacturaInput.addEventListener('change', (e) => {
+                this.onFacturaFileChosen(e);
+            });
+        }
         
         const ventaForm = document.getElementById('venta-form');
         if (ventaForm) {
@@ -2688,6 +2695,42 @@ const app = {
         } catch (error) {
             console.error('Error refreshing compras:', error);
             alert('Error al cargar las compras.');
+        }
+    },
+
+    openFacturaUpload(compraId) {
+        const input = document.getElementById('compra-factura-input');
+        if (!input) return;
+        input.dataset.compraId = compraId || '';
+        input.value = '';
+        input.click();
+    },
+
+    async onFacturaFileChosen(event) {
+        const input = event.target;
+        const compraId = input.dataset.compraId;
+        const file = input.files && input.files[0];
+        input.dataset.compraId = '';
+        input.value = '';
+        if (!compraId || !file) return;
+        try {
+            await comprasStorage.uploadFactura(compraId, file);
+            await this.refreshCompras();
+        } catch (error) {
+            console.error('Error subiendo factura:', error);
+            alert('Error al subir la factura: ' + (error.message || 'Error desconocido'));
+        }
+    },
+
+    async deleteFacturaCompra(compraId) {
+        if (!compraId) return;
+        if (!confirm('¿Eliminar la factura de esta compra?')) return;
+        try {
+            await comprasStorage.deleteFactura(compraId);
+            await this.refreshCompras();
+        } catch (error) {
+            console.error('Error eliminando factura:', error);
+            alert('Error al eliminar la factura: ' + (error.message || 'Error desconocido'));
         }
     },
     

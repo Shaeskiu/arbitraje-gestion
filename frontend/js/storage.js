@@ -572,6 +572,43 @@ const comprasStorage = {
             console.error('Error updating compra:', error);
             throw error;
         }
+    },
+
+    async uploadFactura(compraId, file) {
+        if (!compraId || typeof compraId !== 'string') {
+            throw new Error('Valid compra ID is required');
+        }
+        if (!file || !(file instanceof File)) {
+            throw new Error('Se requiere un archivo');
+        }
+        const formData = new FormData();
+        formData.append('factura', file);
+        const response = await fetch(`${this.apiBaseUrl}/compras/${compraId}/factura`, {
+            method: 'POST',
+            body: formData
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    },
+
+    async deleteFactura(compraId) {
+        if (!compraId || typeof compraId !== 'string') {
+            throw new Error('Valid compra ID is required');
+        }
+        const response = await fetch(`${this.apiBaseUrl}/compras/${compraId}/factura`, {
+            method: 'DELETE'
+        });
+        if (!response.ok && response.status !== 204) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(errorData.error || errorData.details || `HTTP error! status: ${response.status}`);
+        }
+    },
+
+    getFacturaUrl(compraId) {
+        return `${this.apiBaseUrl}/compras/${compraId}/factura`;
     }
 };
 

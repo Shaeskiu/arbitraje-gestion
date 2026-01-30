@@ -1235,7 +1235,7 @@ const ui = {
         if (cardsContainer) cardsContainer.innerHTML = '';
         
         if (!compras || compras.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-slate-400">No hay compras registradas</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-slate-400">No hay compras registradas</td></tr>';
             if (cardsContainer) cardsContainer.innerHTML = '<div class="text-center text-slate-400 py-8">No hay compras registradas</div>';
             return;
         }
@@ -1267,6 +1267,30 @@ const ui = {
             } else {
                 desdeOportunidadHtml = '<span class="text-slate-300">-</span>';
             }
+
+            const facturaUrl = comprasStorage.getFacturaUrl ? comprasStorage.getFacturaUrl(compra.id) : '';
+            let facturaHtml = '';
+            if (compra.factura_path) {
+                facturaHtml = `
+                    <div class="flex items-center gap-1 flex-wrap">
+                        <a href="${facturaUrl}" target="_blank" rel="noopener noreferrer" class="p-1.5 rounded text-slate-300 hover:text-white hover:bg-slate-600" title="Descargar factura">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        </a>
+                        <button type="button" onclick="app.deleteFacturaCompra('${compra.id}')" class="p-1.5 rounded text-slate-300 hover:text-red-400 hover:bg-slate-600" title="Eliminar factura">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4m1 4h.01M17 4h.01"></path></svg>
+                        </button>
+                        <button type="button" onclick="app.openFacturaUpload('${compra.id}')" class="p-1.5 rounded text-slate-300 hover:text-white hover:bg-slate-600" title="Subir otra factura">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        </button>
+                    </div>
+                `;
+            } else {
+                facturaHtml = `
+                    <button type="button" onclick="app.openFacturaUpload('${compra.id}')" class="p-1.5 rounded text-slate-400 hover:text-indigo-400 hover:bg-slate-600" title="Adjuntar factura">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                    </button>
+                `;
+            }
             
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap">
@@ -1289,6 +1313,9 @@ const ui = {
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-center">
                     ${desdeOportunidadHtml}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    ${facturaHtml}
                 </td>
             `;
             
@@ -1334,6 +1361,18 @@ const ui = {
                             Ver Oportunidad
                         </button>
                     </div>` : ''}
+                    <div class="pt-3 border-t border-slate-700 flex items-center justify-between">
+                        <span class="text-sm text-slate-300">Factura</span>
+                        <div class="flex items-center gap-2">
+                            ${compra.factura_path ? `
+                                <a href="${comprasStorage.getFacturaUrl ? comprasStorage.getFacturaUrl(compra.id) : ''}" target="_blank" rel="noopener noreferrer" class="text-sm text-indigo-400 hover:text-indigo-300">Descargar</a>
+                                <button type="button" onclick="app.deleteFacturaCompra('${compra.id}')" class="text-sm text-slate-400 hover:text-red-400">Eliminar</button>
+                                <button type="button" onclick="app.openFacturaUpload('${compra.id}')" class="text-sm text-slate-400 hover:text-indigo-400">Subir otra</button>
+                            ` : `
+                                <button type="button" onclick="app.openFacturaUpload('${compra.id}')" class="text-sm text-indigo-400 hover:text-indigo-300">Adjuntar</button>
+                            `}
+                        </div>
+                    </div>
                 `;
                 cardsContainer.appendChild(card);
             }
