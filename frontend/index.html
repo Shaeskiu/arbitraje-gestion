@@ -357,6 +357,24 @@
             transform: translateY(-4px);
             box-shadow: 0 12px 48px rgba(99, 102, 241, 0.2);
         }
+
+        /* Dashboard tabs */
+        .dashboard-tab {
+            transition: all 0.2s ease;
+        }
+
+        .dashboard-tab.active {
+            color: rgb(129, 140, 248);
+            border-color: rgb(99, 102, 241);
+        }
+
+        .dashboard-tab-content {
+            display: block;
+        }
+
+        .dashboard-tab-content.hidden {
+            display: none;
+        }
         
         /* Métricas con gradiente */
         .metric-value {
@@ -636,56 +654,109 @@
                 <div class="space-y-6">
                     <h2 class="text-3xl font-display font-bold text-white">Dashboard de Negocio</h2>
                     
-                    <div class="dashboard-card">
-                        <h3 class="text-lg font-display font-semibold text-white mb-4">Capital Inmovilizado</h3>
-                        <div class="text-5xl font-display font-bold metric-value" id="dashboard-immobilized-capital">€0.00</div>
-                        <p class="text-sm text-slate-300 mt-2">Valor total del stock actual (unidades restantes × precio de compra)</p>
+                    <!-- Pestañas -->
+                    <div class="border-b border-slate-700">
+                        <nav class="flex space-x-8" aria-label="Tabs">
+                            <button onclick="app.switchDashboardTab('negocio')" id="dashboard-tab-negocio" class="dashboard-tab active py-4 px-1 border-b-2 border-indigo-500 font-medium text-sm text-indigo-400">
+                                Negocio
+                            </button>
+                            <button onclick="app.switchDashboardTab('operacionales')" id="dashboard-tab-operacionales" class="dashboard-tab py-4 px-1 border-b-2 border-transparent font-medium text-sm text-slate-400 hover:text-slate-300 hover:border-slate-300">
+                                Operacionales
+                            </button>
+                        </nav>
                     </div>
 
-                    <div class="dashboard-card">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-medium text-white">Ventas en el Tiempo</h3>
-                            <div class="flex gap-2">
-                                <select id="sales-grouping" class="input-field text-sm">
-                                    <option value="day">Por Día</option>
-                                    <option value="week">Por Semana</option>
-                                    <option value="month" selected>Por Mes</option>
-                                </select>
-                                <select id="sales-date-range" class="input-field text-sm">
-                                    <option value="last-6-months" selected>Últimos 6 meses</option>
-                                    <option value="last-12-months">Últimos 12 meses</option>
-                                    <option value="custom">Rango personalizado</option>
-                                </select>
-                                <div id="sales-custom-range" class="hidden flex gap-2">
-                                    <input type="date" id="sales-start-date" class="input-field text-sm">
-                                    <input type="date" id="sales-end-date" class="input-field text-sm">
-                                    <button onclick="app.loadSalesChart()" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Aplicar</button>
+                    <!-- Contenido Pestaña Negocio -->
+                    <div id="dashboard-content-negocio" class="dashboard-tab-content">
+                        <div class="space-y-6">
+                            <div class="dashboard-card">
+                                <h3 class="text-lg font-display font-semibold text-white mb-4">Capital Inmovilizado</h3>
+                                <div class="text-5xl font-display font-bold metric-value" id="dashboard-immobilized-capital">€0.00</div>
+                                <p class="text-sm text-slate-300 mt-2">Valor total del stock actual (unidades restantes × precio de compra)</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="dashboard-card">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h3 class="text-lg font-medium text-white">Ventas en el Tiempo</h3>
+                                        <div class="flex gap-2 flex-wrap">
+                                            <select id="sales-grouping" class="input-field text-sm">
+                                                <option value="day">Por Día</option>
+                                                <option value="week">Por Semana</option>
+                                                <option value="month" selected>Por Mes</option>
+                                            </select>
+                                            <select id="sales-date-range" class="input-field text-sm">
+                                                <option value="last-6-months" selected>Últimos 6 meses</option>
+                                                <option value="last-12-months">Últimos 12 meses</option>
+                                                <option value="custom">Rango personalizado</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div id="sales-custom-range" class="hidden mb-4">
+                                        <div class="flex gap-2 flex-wrap">
+                                            <input type="date" id="sales-start-date" class="input-field text-sm">
+                                            <input type="date" id="sales-end-date" class="input-field text-sm">
+                                            <button onclick="app.loadSalesChart()" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Aplicar</button>
+                                        </div>
+                                    </div>
+                                    <div id="sales-chart-container" class="h-64 relative">
+                                        <div class="absolute inset-0 flex items-center justify-center text-slate-400">Cargando datos...</div>
+                                    </div>
+                                </div>
+
+                                <div class="dashboard-card">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h3 class="text-lg font-medium text-white">Márgenes</h3>
+                                        <select id="margins-date-range" class="input-field text-sm">
+                                            <option value="last-6-months" selected>Últimos 6 meses</option>
+                                            <option value="last-12-months">Últimos 12 meses</option>
+                                            <option value="custom">Rango personalizado</option>
+                                        </select>
+                                    </div>
+                                    <div class="hidden" id="margins-custom-range">
+                                        <div class="flex gap-2 mb-4 flex-wrap">
+                                            <input type="date" id="margins-start-date" class="input-field text-sm">
+                                            <input type="date" id="margins-end-date" class="input-field text-sm">
+                                            <button onclick="app.loadMarginsChart()" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Aplicar</button>
+                                        </div>
+                                    </div>
+                                    <div id="margins-chart-container" class="h-64 relative">
+                                        <div class="absolute inset-0 flex items-center justify-center text-slate-400">Cargando datos...</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div id="sales-chart-container" class="h-64 relative">
-                            <div class="absolute inset-0 flex items-center justify-center text-slate-400">Cargando datos...</div>
-                        </div>
                     </div>
 
-                    <div class="dashboard-card">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-medium text-white">Márgenes</h3>
-                            <select id="margins-date-range" class="input-field text-sm">
-                                <option value="last-6-months" selected>Últimos 6 meses</option>
-                                <option value="last-12-months">Últimos 12 meses</option>
-                                <option value="custom">Rango personalizado</option>
-                            </select>
-                        </div>
-                        <div class="hidden" id="margins-custom-range">
-                            <div class="flex gap-2 mb-4">
-                                <input type="date" id="margins-start-date" class="input-field text-sm">
-                                <input type="date" id="margins-end-date" class="input-field text-sm">
-                                <button onclick="app.loadMarginsChart()" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Aplicar</button>
+                    <!-- Contenido Pestaña Operacionales -->
+                    <div id="dashboard-content-operacionales" class="dashboard-tab-content hidden">
+                        <div class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="dashboard-card">
+                                    <h3 class="text-lg font-display font-semibold text-white mb-4">Stock por Estado</h3>
+                                    <div id="stock-donut-chart-container" class="h-64 relative">
+                                        <div class="absolute inset-0 flex items-center justify-center text-slate-400">Cargando datos...</div>
+                                    </div>
+                                </div>
+
+                                <div class="dashboard-card">
+                                    <h3 class="text-lg font-display font-semibold text-white mb-4">Tiempos Medios</h3>
+                                    <div class="space-y-4">
+                                        <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+                                            <div class="text-sm text-slate-300 mb-1">Compra → Recepción</div>
+                                            <div class="text-2xl font-display font-bold text-indigo-300" id="metric-time-to-reception">-</div>
+                                        </div>
+                                        <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+                                            <div class="text-sm text-slate-300 mb-1">Recepción → Puesta en Venta</div>
+                                            <div class="text-2xl font-display font-bold text-indigo-300" id="metric-time-to-available">-</div>
+                                        </div>
+                                        <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+                                            <div class="text-sm text-slate-300 mb-1">Puesta en Venta → Venta (Rotación)</div>
+                                            <div class="text-2xl font-display font-bold text-indigo-300" id="metric-time-to-sale">-</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div id="margins-chart-container" class="h-64 relative">
-                            <div class="absolute inset-0 flex items-center justify-center text-slate-400">Cargando datos...</div>
                         </div>
                     </div>
                 </div>

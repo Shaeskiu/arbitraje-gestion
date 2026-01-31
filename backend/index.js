@@ -2868,6 +2868,160 @@ app.get('/dashboard/margins', async (req, res) => {
   }
 });
 
+app.get('/dashboard/operational-metrics', async (req, res) => {
+  try {
+    // 1. Obtener stock por estado
+    const { data: stockItems, error: stockError } = await supabase
+      .from('stock')
+      .select('estado');
+
+    if (stockError) {
+      console.error('Supabase error (stock):', stockError);
+      return res.status(500).json({ error: 'Database error', details: stockError.message });
+    }
+
+    // Contar stock por estado
+    const stockByStatus = {
+      pendiente_recibir: 0,
+      recepcionado: 0,
+      disponible: 0
+    };
+
+    if (stockItems && stockItems.length > 0) {
+      stockItems.forEach(item => {
+        const estado = item.estado;
+        if (estado && stockByStatus.hasOwnProperty(estado)) {
+          stockByStatus[estado]++;
+        }
+      });
+    }
+
+    // 2. Calcular tiempo medio compra → recepción
+    const { data: stockWithReception, error: stockReceptionError } = await supabase
+      .from('stock')
+      .select('id, compra_id, fecha_recepcion')
+      .not('fecha_recepcion', 'is', null)
+      .not('compra_id', 'is', null);
+
+    let avgTimeToReception = null;
+    if (!stockReceptionError && stockWithReception && stockWithReception.length > 0) {
+      const compraIds = [...new Set(stockWithReception.map(s => s.compra_id).filter(Boolean))];
+      const { data: compras, error: comprasError } = await supabase
+        .from('compras')
+        .select('id, fecha_compra')
+        .in('id', compraIds)
+        .not('fecha_compra', 'is', null);
+
+      if (!comprasError && compras && compras.length > 0) {
+        const comprasMap = {};
+        compras.forEach(c => {
+          comprasMap[c.id] = c;
+        });
+
+        const timeDifferences = [];
+        stockWithReception.forEach(item => {
+          const compra = comprasMap[item.compra_id];
+          if (compra && compra.fecha_compra && item.fecha_recepcion) {
+            const fechaCompra = new Date(compra.fecha_compra);
+            const fechaRecepcion = new Date(item.fecha_recepcion);
+            const diffTime = fechaRecepcion - fechaCompra;
+            const diffDays = diffTime / (1000 * 60 * 60 * 24);
+            if (diffDays >= 0) {
+              timeDifferences.push(diffDays);
+            }
+          }
+        });
+
+        if (timeDifferences.length > 0) {
+          const sum = timeDifferences.reduce((a, b) => a + b, 0);
+          avgTimeToReception = sum / timeDifferences.length;
+        }
+      }
+    }
+
+    // 3. Calcular tiempo medio recepción → puesta en venta
+    const { data: stockWithFechas, error: fechasError } = await supabase
+      .from('stock')
+      .select('fecha_recepcion, fecha_disponible')
+      .not('fecha_recepcion', 'is', null)
+      .not('fecha_disponible', 'is', null);
+
+    let avgTimeToAvailable = null;
+    if (!fechasError && stockWithFechas && stockWithFechas.length > 0) {
+      const timeDifferences = [];
+      stockWithFechas.forEach(item => {
+        if (item.fecha_recepcion && item.fecha_disponible) {
+          const fechaRecepcion = new Date(item.fecha_recepcion);
+          const fechaDisponible = new Date(item.fecha_disponible);
+          const diffTime = fechaDisponible - fechaRecepcion;
+          const diffDays = diffTime / (1000 * 60 * 60 * 24);
+          if (diffDays >= 0) {
+            timeDifferences.push(diffDays);
+          }
+        }
+      });
+
+      if (timeDifferences.length > 0) {
+        const sum = timeDifferences.reduce((a, b) => a + b, 0);
+        avgTimeToAvailable = sum / timeDifferences.length;
+      }
+    }
+
+    // 4. Calcular tiempo medio puesta en venta → venta (rotación)
+    const { data: ventas, error: ventasError } = await supabase
+      .from('ventas')
+      .select('stock_id, fecha_venta')
+      .not('fecha_venta', 'is', null)
+      .not('stock_id', 'is', null);
+
+    let avgTimeToSale = null;
+    if (!ventasError && ventas && ventas.length > 0) {
+      const stockIds = [...new Set(ventas.map(v => v.stock_id).filter(Boolean))];
+      const { data: stockItems, error: stockError } = await supabase
+        .from('stock')
+        .select('id, fecha_disponible')
+        .in('id', stockIds)
+        .not('fecha_disponible', 'is', null);
+
+      if (!stockError && stockItems && stockItems.length > 0) {
+        const stockMap = {};
+        stockItems.forEach(s => {
+          stockMap[s.id] = s;
+        });
+
+        const timeDifferences = [];
+        ventas.forEach(venta => {
+          const stock = stockMap[venta.stock_id];
+          if (stock && stock.fecha_disponible && venta.fecha_venta) {
+            const fechaDisponible = new Date(stock.fecha_disponible);
+            const fechaVenta = new Date(venta.fecha_venta);
+            const diffTime = fechaVenta - fechaDisponible;
+            const diffDays = diffTime / (1000 * 60 * 60 * 24);
+            if (diffDays >= 0) {
+              timeDifferences.push(diffDays);
+            }
+          }
+        });
+
+        if (timeDifferences.length > 0) {
+          const sum = timeDifferences.reduce((a, b) => a + b, 0);
+          avgTimeToSale = sum / timeDifferences.length;
+        }
+      }
+    }
+
+    res.json({
+      stockByStatus,
+      avgTimeToReception: avgTimeToReception !== null ? parseFloat(avgTimeToReception.toFixed(2)) : null,
+      avgTimeToAvailable: avgTimeToAvailable !== null ? parseFloat(avgTimeToAvailable.toFixed(2)) : null,
+      avgTimeToSale: avgTimeToSale !== null ? parseFloat(avgTimeToSale.toFixed(2)) : null
+    });
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
 // ============================================
 // KANBAN ENDPOINTS (TAREAS SEMANALES)
 // ============================================

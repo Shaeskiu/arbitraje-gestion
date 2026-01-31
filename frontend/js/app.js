@@ -451,6 +451,11 @@ const app = {
             return;
         }
         
+        // Si es el dashboard, inicializar la pestaña "negocio" por defecto
+        if (viewName === 'dashboard') {
+            this.switchDashboardTab('negocio');
+        }
+        
         console.log('Vista encontrada:', viewName, {
             element: view,
             className: view.className,
@@ -985,6 +990,179 @@ const app = {
         } catch (error) {
             console.error('Error refreshing business dashboard:', error);
             alert('Error al cargar el dashboard. Por favor, recarga la página.');
+        }
+    },
+
+    switchDashboardTab(tabName) {
+        // Ocultar todas las pestañas
+        document.querySelectorAll('.dashboard-tab').forEach(tab => {
+            tab.classList.remove('active');
+            tab.classList.add('border-transparent', 'text-slate-400');
+            tab.classList.remove('border-indigo-500', 'text-indigo-400');
+        });
+
+        // Ocultar todo el contenido
+        document.querySelectorAll('.dashboard-tab-content').forEach(content => {
+            content.classList.add('hidden');
+        });
+
+        // Mostrar la pestaña seleccionada
+        const selectedTab = document.getElementById(`dashboard-tab-${tabName}`);
+        if (selectedTab) {
+            selectedTab.classList.add('active', 'border-indigo-500', 'text-indigo-400');
+            selectedTab.classList.remove('border-transparent', 'text-slate-400');
+        }
+
+        // Mostrar el contenido correspondiente
+        const selectedContent = document.getElementById(`dashboard-content-${tabName}`);
+        if (selectedContent) {
+            selectedContent.classList.remove('hidden');
+        }
+
+        // Cargar datos según la pestaña seleccionada
+        if (tabName === 'operacionales') {
+            this.loadOperationalMetrics();
+        } else if (tabName === 'negocio') {
+            // Recargar datos de negocio si es necesario
+            this.refreshBusinessDashboard();
+        }
+    },
+
+    async loadOperationalMetrics() {
+        try {
+            const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/dashboard/operational-metrics`);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            
+            this.renderStockDonutChart(data.stockByStatus || {});
+            this.renderTimeMetrics(data);
+        } catch (error) {
+            console.error('Error loading operational metrics:', error);
+            const container = document.getElementById('stock-donut-chart-container');
+            if (container) {
+                container.innerHTML = '<p class="text-red-500">Error al cargar los datos</p>';
+            }
+        }
+    },
+
+    renderStockDonutChart(stockByStatus) {
+        const container = document.getElementById('stock-donut-chart-container');
+        if (!container) return;
+
+        // Limpiar contenedor
+        container.innerHTML = '<canvas id="stock-donut-chart"></canvas>';
+        const canvas = document.getElementById('stock-donut-chart');
+        if (!canvas) return;
+
+        // Destruir gráfico existente si existe
+        if (this.stockDonutChartInstance) {
+            this.stockDonutChartInstance.destroy();
+        }
+
+        const ctx = canvas.getContext('2d');
+        
+        // Preparar datos
+        const labels = [];
+        const data = [];
+        const backgroundColors = [];
+        
+        const statusLabels = {
+            'pendiente_recibir': 'Pendiente de Recibir',
+            'recepcionado': 'Recepcionado',
+            'disponible': 'En Venta'
+        };
+        
+        const statusColors = {
+            'pendiente_recibir': 'rgba(239, 68, 68, 0.8)', // red
+            'recepcionado': 'rgba(245, 158, 11, 0.8)', // amber
+            'disponible': 'rgba(16, 185, 129, 0.8)' // green
+        };
+
+        Object.keys(stockByStatus).forEach(status => {
+            const count = stockByStatus[status] || 0;
+            if (count > 0 || Object.keys(stockByStatus).length === 0) {
+                labels.push(statusLabels[status] || status);
+                data.push(count);
+                backgroundColors.push(statusColors[status] || 'rgba(148, 163, 184, 0.8)');
+            }
+        });
+
+        if (data.length === 0 || data.every(v => v === 0)) {
+            container.innerHTML = '<p class="text-slate-400">No hay stock disponible</p>';
+            return;
+        }
+
+        this.stockDonutChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: backgroundColors,
+                    borderColor: backgroundColors.map(color => color.replace('0.8', '1')),
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgb(241, 245, 249)',
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    renderTimeMetrics(data) {
+        // Tiempo medio compra → recepción
+        const timeToReceptionEl = document.getElementById('metric-time-to-reception');
+        if (timeToReceptionEl) {
+            if (data.avgTimeToReception !== null && data.avgTimeToReception !== undefined) {
+                timeToReceptionEl.textContent = `${parseFloat(data.avgTimeToReception).toFixed(1)} días`;
+            } else {
+                timeToReceptionEl.textContent = 'No hay datos';
+            }
+        }
+
+        // Tiempo medio recepción → puesta en venta
+        const timeToAvailableEl = document.getElementById('metric-time-to-available');
+        if (timeToAvailableEl) {
+            if (data.avgTimeToAvailable !== null && data.avgTimeToAvailable !== undefined) {
+                timeToAvailableEl.textContent = `${parseFloat(data.avgTimeToAvailable).toFixed(1)} días`;
+            } else {
+                timeToAvailableEl.textContent = 'No hay datos';
+            }
+        }
+
+        // Tiempo medio puesta en venta → venta (rotación)
+        const timeToSaleEl = document.getElementById('metric-time-to-sale');
+        if (timeToSaleEl) {
+            if (data.avgTimeToSale !== null && data.avgTimeToSale !== undefined) {
+                timeToSaleEl.textContent = `${parseFloat(data.avgTimeToSale).toFixed(1)} días`;
+            } else {
+                timeToSaleEl.textContent = 'No hay ventas';
+            }
         }
     },
     
