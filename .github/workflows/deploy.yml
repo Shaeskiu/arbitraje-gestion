@@ -36,7 +36,7 @@ jobs:
       - name: Generate config.js
         run: |
           # Usa los secrets si están configurados, sino usa valores por defecto
-          API_URL="${{ secrets.API_BASE_URL || 'https://arbitraje-gestion-production.up.railway.app' }}"
+          API_URL="${{ secrets.API_BASE_URL || 'https://arbitraje-gestion.onrender.com' }}"
           SUPABASE_URL="${{ secrets.SUPABASE_URL || 'http://localhost:8000' }}"
           SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' }}"
           cat > frontend/config.js << EOF
